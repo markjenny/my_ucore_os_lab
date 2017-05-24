@@ -3,8 +3,16 @@ EMPTY	:=
 SPACE	:= $(EMPTY) $(EMPTY)
 SLASH	:= /
 
+#通常，make会把其要执行的命令打印到输出屏幕上，如果我们使用
+#‘@’字符在命令行前，那么这个命令将不被make显示出来，在本Makefile中，
+#我们可以通过"V="来尝试显示出命令，因为“V=”让变量V变成了空，
+#也就是@这个显示命令没有了；
 V       := @
 
+#下面这个是为了尝试获取到GCCPREFIX，没有太多需要说的，唯一需要说的是在
+#Makefile中调用了shell，其中grep '^elf32-i386$$' > /dev/null就是将相关
+#的信息重定向到空设备中，也就是什么都输出；其中2>&1并不是将错误输出重定向
+#标准输出，即让错误输出等同于标准输出
 # try to infer the correct GCCPREFX
 ifndef GCCPREFIX
 GCCPREFIX := $(shell if i386-elf-objdump -i 2>&1 | grep '^elf32-i386$$' >/dev/null 2>&1; \
@@ -34,6 +42,7 @@ QEMU := $(shell if which qemu-system-i386 > /dev/null; \
 	echo "***" 1>&2; exit 1; fi)
 endif
 
+#.SUFFIXES和.DELETE_ON_ERROR都是special target
 # eliminate default suffix rules
 .SUFFIXES: .c .S .h
 
@@ -41,10 +50,10 @@ endif
 .DELETE_ON_ERROR:
 
 # define compiler and flags
-
+#主机的编译器
 HOSTCC		:= gcc
 HOSTCFLAGS	:= -g -Wall -O2
-
+#elf32，i386的编译器（与上面的HOSTCC区分主要是为了交叉编译）
 CC		:= $(GCCPREFIX)gcc
 CFLAGS	:= -fno-builtin -Wall -ggdb -m32 -gstabs -nostdinc $(DEFS)
 CFLAGS	+= $(shell $(CC) -fno-stack-protector -E -x c /dev/null >/dev/null 2>&1 && echo -fno-stack-protector)
