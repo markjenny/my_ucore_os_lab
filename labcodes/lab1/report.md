@@ -189,5 +189,87 @@ stepi                #以机器代码的形式单步调试，可以简写为si
 
 > 从标准答案的报告中学习到了相关qemu的其他使用方式：`-d: item1:enable logging of specified item`即让特定相关信息进行日志形式的输出，默认情况下他会在qemu的命令行下进行直接输出，这些时无法保存并不方便查看；我们可以使用`-D logfile`来将logging输出的东西指定到该logfile的日志文件中，以便观察对比；
 
+（ *赞！两个很有用的参数知识* ）
 
-*赞！两个很有用的参数知识*
+通过在gdb中查看也观察出主引导扇区中得bootload在调用bootmain之前得汇编代码(记得要要在gdb调试中加上`x /10i $pc`来将当前得机器代码强制反汇编哦)与bootasm.S和bootblock.asm中的代码是相同的；
+
+随便找一个memset的内核代码，直接使用如下信息设置断点：
+
+```
+break memset #话说我一般都直接使用b来表示break，但是都建了一个代码块了，写太少的代码貌似不好，23333
+```
+`continue`之后就会在memest那里break住。
+
+---
+
+#练习三
+
+---
+
+由于intel芯片的向下兼容的原因，他们特意构造出了A20 gate，通过它来控制是否进行“ *回绕* ”，当使用了80386这个cpu时，无论是实模式还是保护模式，我们都需要将A20使能，保证其可以正常使用从而不产生回绕；所以bootloader进行的过程主要有以下几个主要的过程：
+* 使能A20;
+* 初始化全局描述符表，保证可以确定出数据/代码等相关数据的位置；
+* 使能[保护模式]；
+* 最后将ucore的代码，数据等加载到内存中；
+
+这只是一个大致的过程，实际上根据bootasm.S的描述（没办法，有一些cpu指令高级语言是没有办法来进行描述的，必须使用汇编语言），还是有很多的细节的；
+
+首先我们先要进行一些初始化的工作
+```
+cli #clear interrupt flag,这个是X86架构中Flag寄存器上的一个标志位，将其clear表明该标识位不再起作用了，也就禁止接收中断了
+cld #clear direction flag,这个也是一个标志位，将其置为空就是保证代码和数据是在每次执行之后可以向高地址去继续执行，可以参考[该连接](https://stackoverflow.com/questions/9636691/whats-the-difference-between-cld-and-std-instructions-in-assembly-language)
+
+# 以下主要是将重要的涉及到重要的数据段寄存器置空，这个汇编语言中使用的是movw，而不是mov这是因为现在还是实模式，w指明我们操作的是一个“字”（可以看《cs：app》或王爽的《汇编语言》）
+xorw %ax, %ax #异或保证该寄存器的值为空
+movw %ax, %ds #置空下列三个段寄存器的值
+movw %ax, %es
+movw %ax, %ss
+```
+
+接下来我们就是要将A20 Gate开启，保证当读取超过1MB的内控空间是不会发生相关的“ *回绕* ”从而可以在保护模式下使用整个32bit的4GB空间，简单来说就是将8042单片机的一个引脚置为高电平，具体可以看gitbook形式的指导书，下面这部分代码不再进行引用，直接看代码吧，太简单了没有描述的必要了，反正老师不会评我的实验报告，我只要做到简要明白准确即可（代码位置boot/bootasm.S中的29~43行）
+
+接下来我们就初始化GDT(global description table)，即将全局描述符表加载到内存中，并初始化[GDTR](https://en.wikibooks.org/wiki/X86_Assembly/Global_Descriptor_Table)
+```
+lgst gdtdesc
+```
+多说一句，我们在学习理论课的时候知道了GDTR的作用：标记GDT；并且理论课中得知GDTR中不仅保存了GDT的地址，还保存了GDT的长度，我们从代码中都可以看出：
+```
+gdtdesc:
+.word 0x17                                      # sizeof(gdt) - 1
+.long gdt                                       # address gdt
+```
+
+初始化段寄存器，A20及全局描述符表之后，我们就可以使能保护模式了，这就涉及到要修改CR0控制寄存器的第0bit，将该bit位置为1就使能了`保护模式`，具体的汇编代码如下所示：
+```
+movl %cr0, %eax
+orl $CR0_PE_ON, %eax
+movl %eax, %cr0
+```
+
+将现有的内存模式设置成保护模式后，需要将设置CS寄存器及EIP寄存器的值，在bootssm.S中使用了长跳转指令来设定CS寄存器和EIP寄存器的值，我目前认为跳转指令`jmp`是在段内进行进行跳转，`ljmp`是在段间进行跳转，可以看一个[例子](https://docs.oracle.com/cd/E19455-01/806-3773/instructionset-73/index.html);
+```
+ljmp $PROT_MODE_CSEG, $protcseg
+```
+通过bootasm.S代码中的变量`PROT_MODE_CSEG`为内核的代码段选择子，及CS寄存器的值；`protcseg`为所执行的代码，此事我们已经将CS和EIP全部设置好了，可以正常第执行代码段的代码了；
+
+在call bootmain之前还需要将数据段相关的寄存器进行初始化设置，如下:
+```
+# Set up the protected-mode data segment registers
+    movw $PROT_MODE_DSEG, %ax                       # Our data segment selector
+    movw %ax, %ds                                   # -> DS: Data Segment
+    movw %ax, %es                                   # -> ES: Extra Segment
+    movw %ax, %fs                                   # -> FS
+    movw %ax, %gs                                   # -> GS
+    movw %ax, %ss                                   # -> SS: Stack Segment
+```
+初始化完数据段相关寄存器后，初始化堆栈相关的寄存器：
+```
+movl $0x0, %ebp
+movl $start, %esp
+```
+ebp寄存器是保持最新的栈顶信息，而esp保存的是某一时刻的栈顶信息，是为了函数调用可以进行调用与恢复而使用的；
+
+最后，`call bootmain`
+
+---
+
