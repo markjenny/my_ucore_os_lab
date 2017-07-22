@@ -1,8 +1,8 @@
-#练习一
+# 练习一
 
 ***
 
-#习题1
+# 习题1
 
 （太伤心了，写了一部分的东西竟然没有保存，再打开就没有了，看来以后要写完一个题就将他们进行上传）
 
@@ -166,7 +166,7 @@ objdump -t bin/kernel | sed '1,/SYMBOL TABLE/d; s/ .* / /; /^$/d' > obj/kernel.s
 
 ---
 
-#练习二
+# 练习二
 ***
 为了调试ucore的第一条指令，当然是让它先接电起来啦！但是又要保证不执行任何一条指令，这种蛋疼的要求只有使用qemu来模拟了，模拟的命令为,：
 ```
@@ -202,7 +202,7 @@ break memset #话说我一般都直接使用b来表示break，但是都建了一个代码块了，写太少的
 
 ---
 
-#练习三
+# 练习三
 
 ---
 
@@ -273,3 +273,119 @@ ebp寄存器是保持最新的栈顶信息，而esp保存的是某一时刻的栈顶信息，是为了函数调用可
 
 ---
 
+# 练习四
+
+---
+首先需要引用一段实验指导书中的相关概述：
+> bootloader访问硬盘的是方式是LBA模式的PIO（Program IO）方式，即访问硬盘的方式是通过CPU访问硬盘的**IO地址寄存器**来完成的；
+
+即计算机中存在IO地址寄存器，我们通过对IO地址寄存器进行赋值，从而完成CPU对硬盘的控制及数据读取；IO地址寄存器分别为0x1f0-0x1f7,0x170-0x17f,通过对这些IO地址寄存器的设定，可以保证CPU对硬盘进行相关的访问；
+
+相关IO地址寄存器的值及相关功能如下：
+
+|IO地址|功能|
+|---|:---|
+|0x1f0|读数据，当0x1f7不为忙状态时，可以读。|
+|0x1f2|要读写的扇区数，每次读写前，你需要表明你要读写几个扇区。最小是1个扇区|
+|0x1f3|如果是LBA模式，就是LBA参数的0-7位|
+|0x1f4|如果是LBA模式，就是LBA参数的8-15位|
+|0x1f5|如果是LBA模式，就是LBA参数的16-23位|
+|0x1f6|第0~3位：如果是LBA模式就是24-27位 第4位：为0主盘；为1从盘|
+|0x1f7|状态和命令寄存器。操作时先给命令，再读取，如果不是忙状态就从0x1f0端口读数据|
+
+通过控制这些IO地址寄存器，从而控制CPU访问硬盘的相关行为；
+
+CPU在读取硬盘的内容时要先等待硬盘空闲了之后才能向硬盘发出读取扇区的命令，并且也需要等到硬盘空闲时，才能将硬盘的内容读取到内存中来，所以在读取硬盘内容的步骤就可以分成如下步骤：
+
+* 等待硬盘空闲；
+* 发出读取硬盘的命令；
+* 等待硬盘空闲；
+* 将硬盘扇区的数据读取到内存中；
+
+（ *由于我惊奇的脑回路，导致我一直以为时在kernel.ld中的0x10000和bootmain.S中的0x1000是一个值，只是他们可能写错了的问题导致看起来不一样==，但是正在我为自己的脑回路找借口的时候，发现我的脑回路有问题，那么就将正确的写下来吧，但是我觉得可以对0x1000多嘴几句，以免我的同类也搞不懂0x10000和0x1000有什么区别，23333。话说我在网上查找了一下，几乎都是对代码相同的解释，我想说，都是抄的咩？* ）
+
+首先bootmain函数中，首先进行的是将镜像文件的第二个扇区开始的数据进行读取；
+
+```
+void
+bootmain(void) {
+    // read the 1st page off disk
+    readseg((uintptr_t)ELFHDR, SECTSIZE * 8, 0);
+
+    //...
+}
+```
+上面代码中的readseg函数是从硬盘中读取`SECTSIZE * 8`长度的数据放置到`ELFHDR`这个虚拟地址中，这个时候我就有点搞不清这个`0x10000`的作用了，我的潜意识竟然将它和kernel.ld中的`0x100000`等效成一个东西了，其实这里是不一样，他们的作用是不同的，虾米那我较为详细地阐述一下为什么要使用`0x10000`和`0x100000`；
+首先`0x1000`是一个暂存的地址，即我们将从硬盘中读取到的磁盘数据先放置在这个地方，之后再将这些数据和程序加载到他们需要加载的地方(我们知道，在boot的起始阶段中机器代码会从0x7c00处开始执行，而0x7c00向上取个整就是0x10000，并且0x10000-0x7c00之间完全可以放置了一个扇区的数据，这就是我的解释23333)；
+
+在这里马上再解释一下`0x100000`这个数据的作用，这个数据是kernel程序加载程序段的虚拟地址的地方（ 注：程序的加载过程，我觉得《程序员的自我修养》这本书讲的挺仔细的，虚拟地址可以参考一下我的[博客](https://markjenny.github.io/difference_between_virtualaddress_logicaddress_and_linearaddres/) ），我们通过读取kernel文件也可以看出来：
+
+```
+Elf file type is EXEC (Executable file)
+Entry point 0x100000
+There are 3 program headers, starting at offset 52
+
+Program Headers:
+  Type           Offset   VirtAddr   PhysAddr   FileSiz MemSiz  Flg Align
+  LOAD           0x001000 0x00100000 0x00100000 0x0d6a9 0x0d6a9 R E 0x1000
+  LOAD           0x00f000 0x0010e000 0x0010e000 0x00a16 0x01d80 RW  0x1000
+  GNU_STACK      0x000000 0x00000000 0x00000000 0x00000 0x00000 RWE 0x10
+
+ Section to Segment mapping:
+  Segment Sections...
+   00     .text .rodata .stab .stabstr 
+   01     .data .bss 
+   02 
+```
+通过上文可以看到，代码段（Flg为R E）是要加载到虚拟地址`0x100000`上，而数据段(Flg为RW)是加载到虚拟地址`0x0010e000`上，这些信息通过kernel.ld上也可以清晰地看出来；
+
+我们接下来往下走，读取bootmain首先读取了一个page的数据，但是它是分扇区来进行读取的，即一个扇区一个扇区地读取，如下代码所示：
+
+```
+static void
+readseg(uintptr_t va, uint32_t count, uint32_t offset) {
+    uintptr_t end_va = va + count;
+
+    // round down to sector boundary
+    va -= offset % SECTSIZE;
+
+    // translate from bytes to sectors; kernel starts at sector 1
+    uint32_t secno = (offset / SECTSIZE) + 1;
+
+    // If this is too slow, we could read lots of sectors at a time.
+    // We'd write more to memory than asked, but it doesn't matter --
+    // we load in increasing order.
+    for (; va < end_va; va += SECTSIZE, secno ++) {
+        readsect((void *)va, secno);
+    }
+}
+```
+
+上面的代码都比较好理解，即一个扇区一个扇区地读取，读取成功之后就更新虚拟地址以便下一个扇区要放置的虚拟地址的地方紧随上一个扇区；
+
+上述代码中的函数`readsect`的作用就是我们前面讲的，通过给IO地址寄存器赋值来控制CPU读硬盘数据的读取，自己可以进行对，我就不赘述了。
+
+对于代码段或者数据段来说，每个段都存在一个段表section header,用来表明代码段或者数据段放置的虚拟地址的位置，放置数据的长度，通过`readsect`函数将这些数据从之前内存的暂存位置放置到它要求的位置上，段表的结构可以查看elf.h文件，如下：
+
+```
+/* program section header */
+struct proghdr {
+    uint32_t p_type;   // loadable code or data, dynamic linking info,etc.
+    uint32_t p_offset; // file offset of segment
+    uint32_t p_va;     // virtual address to map segment
+    uint32_t p_pa;     // physical address, not used
+    uint32_t p_filesz; // size of segment in file
+    uint32_t p_memsz;  // size of segment in memory (bigger if contains bss）
+    uint32_t p_flags;  // read/write/execute bits
+    uint32_t p_align;  // required alignment, invariably hardware page size
+};
+```
+最后，通过kernel程序的file header中的`e_entry`指示处程序入口，将控制权交给了kernel，关键代码如下
+
+```
+    // call the entry point from the ELF header
+    // note: does not return
+    ((void (*)(void))(ELFHDR->e_entry & 0xFFFFFF))();
+```
+
+至此，整个kernel的加载并将控制权转移的过程结束。
