@@ -389,3 +389,70 @@ struct proghdr {
 ```
 
 至此，整个kernel的加载并将控制权转移的过程结束。
+
+----
+# 练习五
+----
+
+练习五主要是针对调用栈进行理解及相关的简单实践；但是对于我们理解堆栈的调用还是很有帮助的，后续我还是会在我的blog中贴出一个简单的堆栈调用的讲解；
+
+看了一下实验答案，发现答案还针对最初始的状态对ebp进行了解释，那么我也利用这个思路进行一下解释；不过没有按照实验答案的思路来走，感兴趣的可以看一下；
+
+我们指导在执行被调用函数体时，会执行如下的汇编指令：
+```
+push ebp
+mov esp ebp
+```
+这样新的ebp的指向的堆栈内存中保存的时原来的ebp的值(该内存位置向栈顶方向则是函数体的执行，该内存位置向栈底方向则是该被调用函数的return address及各个实参值（也可能不含有参数）),当函数体执行完毕时，又会执行一次如下汇编指令：
+```
+pop ebp
+```
+又将原ebp的值进行了恢复；这样通过更新ebp的值并存储原来ebp的值，就会将调用的函数形成一个**调用堆栈链**，从而正确地执行函数调用；
+
+我们可以通过该实验的一个调用输出来阐述一下：
+```
+moocos-> cat tmp
+ make qemu
+(THU.CST) os is loading ...
+
+Special kernel symbols:
+  entry  0x00100000 (phys)
+  etext  0x001032f9 (phys)
+  edata  0x0010ea16 (phys)
+  end    0x0010fd20 (phys)
+Kernel executable memory footprint: 64KB
+ebp:0x00007b08 eip:0x001009ad args: 0x00010094 0x00000000 0x00007b38 0x00100092 
+    kern/debug/kdebug.c:311: print_stackframe+28
+ebp:0x00007b18 eip:0x00100ccb 
+ebp:0x00007b18 eip:0x00100ccb args: 0x00000000 0x00000000 0x00000000 0x00007b88 
+    kern/debug/kmonitor.c:125: mon_backtrace+10
+ebp:0x00007b38 eip:0x00100092 
+ebp:0x00007b38 eip:0x00100092 args: 0x00000000 0x00007b60 0xffff0000 0x00007b64 
+    kern/init/init.c:48: grade_backtrace2+33
+ebp:0x00007b58 eip:0x001000bb 
+ebp:0x00007b58 eip:0x001000bb args: 0x00000000 0xffff0000 0x00007b84 0x00000029 
+    kern/init/init.c:53: grade_backtrace1+38
+ebp:0x00007b78 eip:0x001000d9 
+ebp:0x00007b78 eip:0x001000d9 args: 0x00000000 0x00100000 0xffff0000 0x0000001d 
+    kern/init/init.c:58: grade_backtrace0+23
+ebp:0x00007b98 eip:0x001000fe 
+ebp:0x00007b98 eip:0x001000fe args: 0x0010331c 0x00103300 0x0000130a 0x00000000 
+    kern/init/init.c:63: grade_backtrace+34
+ebp:0x00007bc8 eip:0x00100055 
+ebp:0x00007bc8 eip:0x00100055 args: 0x00000000 0x00000000 0x00000000 0x00010094 
+    kern/init/init.c:28: kern_init+84
+ebp:0x00007bf8 eip:0x00007d68 
+ebp:0x00007bf8 eip:0x00007d68 args: 0xc031fcfa 0xc08ed88e 0x64e4d08e 0xfa7502a8 
+    <unknow>: -- 0x00007d67 --
+ebp:0x00000000 eip:0x00007c4f 
+ebp:0x00000000 eip:0x00007c4f args: 0xf000e2c3 0xf000ff53 0xf000ff53 0xf000ff53
+```
+我们可以看到ebp的值是如下变化的：
+`0x00000000`，'0x00007bf8'，'0x00007bc8'，`0x00007b98`，`0x00007b98`，`0x00007b78`，`0x00007b58`，`0x00007b38`，`0x00007b18`，`0x00007b08`；
+
+对于上述的变化有两点要说一下：
+
+1. 为什么我要逆序来写呢？因为我从初始调用状态开始的，首先在操作系统的bootloader会初始化相关的寄存器/A20/全局描述符表及堆栈信息（即让ebp为0x00000000，esp为0x00007c00）；所以初始状态的ebp就是0x00000000；
+2. 为什么之后ebp的值是一直在变小的，因为堆栈的增长是向虚拟地址空间小的方向进行的；
+
+---
