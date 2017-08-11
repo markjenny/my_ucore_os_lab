@@ -456,3 +456,57 @@ ebp:0x00000000 eip:0x00007c4f args: 0xf000e2c3 0xf000ff53 0xf000ff53 0xf000ff53
 2. 为什么之后ebp的值是一直在变小的，因为堆栈的增长是向虚拟地址空间小的方向进行的；
 
 ---
+# 练习六
+---
+## 6.1
+通过实验指导书中lab1的【中断与异常】的图9中对中断门的格式描述可以得出以下结论：
+
+- 中断描述符长为8个字节，其中0-1字节和6-7字节为偏移地址；第2-3个字节为段选择子；一旦CPU获取了中断向量（可以理解为中断向量表的index）就会根据向量值从IDT中获取到该位置上的中断描述符；该位置的中断描述符有通过段选择子从GDT表中找到对应的段描述符，由于段描述符中存有相应的基址地址而中断描述符中又存有偏移地址，二者就可以确定中断例程的入口地址；
+
+- 根据/kern/mm/mmu.h中对中断描述符（interrupt and trap）的定义可以进行更好的理解：
+
+```
+//以上是我没有使用过的这种限定符号，但是通过成员后面的冒号方法来指定元素bit数的方法，新奇~
+/* Gate descriptors for interrupts and traps */
+struct gatedesc {
+  unsigned gd_off_15_0 : 16; // low 16 bits of offset in segment
+  unsigned gd_ss : 16; // segment selector
+  unsigned gd_args : 5; // # args, 0 for interrupt/trap gates
+  unsigned gd_rsv1 : 3; // reserved(should be zero I guess)
+  unsigned gd_type : 4; // type(STS_{TG,IG32,TG32})
+  unsigned gd_s : 1; // must be 0 (system)
+  unsigned gd_dpl : 2; // descriptor(meaning new) privilege level
+  unsigned gd_p : 1; // Present
+  unsigned gd_off_31_16 : 16; // high bits of offset in segment
+};
+```
+
+- 使用uintptr_t一般是与机器的指针长度相同，主要的作用有两个：1，将地址转换成usigned int 类型，从而可以对指针进行int类型才可以进行的相关操作；2.是用来当做句柄来使用的，例如某一个资源的资源描述信息；
+
+## 6.2
+
+```
+//idt的初始化
+extern uintptr_t __vectors[];//构建保护模式下的trap/exception vector，里面用于存储中断服务例程的入口地址（注，是offset地址），并且[0,31]是定好的留给exception使用的，[32,255]可以留给用户用来设置interrupt，exception或system call来使用；
+
+for (int i = 0; i < 256; i++)
+{
+     //初始化全局描述符表，即初始化所有表项的的段描述符；
+     //GD_KTEXT为内核的代码段的段描述符
+       //DPL_KERNEL为特权级标识，用来控制中断处理的方式
+     SETGATE(idt[i], 0, GD_KTEXT, __vector[i], DPL_KERNEL)
+}
+     //这里idt_pd之所以叫伪描述符是因为其存了相关中断描述符信息，这个信息与IDTR寄存器相关（即伪描述符的信息是存储在IDTR中的）
+     //lidt和sidt是操作6字节的操作数，用于设定和存储idt的位置信息
+     lidt(&idt_pd)
+```
+
+## 6.3
+```
+//处理时钟中断
+ticks++;
+if (0 == ticks % TICK_NUM)
+{
+	print_ticks();
+}
+```
