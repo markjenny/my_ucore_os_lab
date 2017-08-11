@@ -59,6 +59,9 @@ idt_init(void) {
 	     //DPL_KERNEL为特权级标识，用来控制中断处理的方式
 	     SETGATE(idt[i], 0, GD_KTEXT, __vectors[i], DPL_KERNEL);
 	}
+    //我们希望用户态进行可以产生软中断，从而trap到内核中，因为我们就需要将某个中
+    //断描述符的privilege level设置成用户态
+    SETGATE(idt[T_SWITCH_TOK], 1, GD_KTEXT, __vectors[T_SWITCH_TOK], DPL_USER);
 	     //这里idt_pd之所以叫伪描述符是因为其存了相关中断描述符信息，这个信息与IDTR寄存器相关（即伪描述符的信息是存储在IDTR中的）
 	     //lidt和sidt是操作6字节的操作数，用于设定和存储idt的位置信息
 	lidt(&idt_pd);
