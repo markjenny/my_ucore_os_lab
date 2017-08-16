@@ -184,17 +184,23 @@ trap_dispatch(struct trapframe *tf) {
         break;
     //LAB1 CHALLENGE 1 : YOUR CODE you should modify below codes.
     case T_SWITCH_TOU:
-        cprintf("trap in T_SWITCH_TOU.");
-        tf->tf_cs = USER_CS;
-        tf->tf_ds = tf->tf_es = tf->tf_ss = USER_DS;
-        tf->tf_esp = (uint32_t)tf + sizeof(struct trapframe) - 8;
-        tf->tf_eflags |= FL_IOPL_MASK;
+        if (tf->tf_cs != USER_CS) //the interrupt request is made by user
+        {
+            cprintf("trap in T_SWITCH_TOU.");
+            tf->tf_cs = USER_CS;
+            tf->tf_ds = tf->tf_es = tf->tf_ss = USER_DS;
+            tf->tf_esp = (uint32_t)tf + sizeof(struct trapframe) - 8;
+            tf->tf_eflags |= FL_IOPL_MASK;
+        }
         break;
     case T_SWITCH_TOK:
-        cprintf("trap in T_SWITCH_TOK.");
-        tf->tf_cs = KERNEL_CS;
-        tf->tf_ds = tf->tf_es = KERNEL_DS;
-        tf->tf_eflags &= ~FL_IOPL_MASK;
+        if (tf->tf_cs != KERNEL_CS)
+        {
+            cprintf("trap in T_SWITCH_TOK.");
+            tf->tf_cs = KERNEL_CS;
+            tf->tf_ds = tf->tf_es = KERNEL_DS;
+            tf->tf_eflags &= ~FL_IOPL_MASK;
+        }
         break;
     case IRQ_OFFSET + IRQ_IDE1:
     case IRQ_OFFSET + IRQ_IDE2:
