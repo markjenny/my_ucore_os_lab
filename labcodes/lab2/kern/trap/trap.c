@@ -27,6 +27,8 @@ static void print_ticks() {
  * */
 static struct gatedesc idt[256] = {{0}};
 
+//伪描述符由两部分组成，由线性地址基址和limit组成，limit是用于限定
+//idt总长度所使用的；与段描述符中的limit的作用相同
 static struct pseudodesc idt_pd = {
     sizeof(idt) - 1, (uintptr_t)idt
 };
@@ -46,7 +48,24 @@ idt_init(void) {
       *     You don't know the meaning of this instruction? just google it! and check the libs/x86.h to know more.
       *     Notice: the argument of lidt is idt_pd. try to find it!
       */
-}
+	//构建保护模式下的trap/exception vector，里面用于存储中断服务例程的入口地址（注，是offset地址），并且[0,31]是定好的留给exception使用的，[32,255]可以留给用户用来设置interrupt，exception或system call来使用；
+	extern uintptr_t __vectors[];
+
+	int i;
+	for (i = 0; i < 256; i++)
+	{
+	     //初始化全局描述符表，即初始化所有表项的的段描述符；
+	     //GD_KTEXT为内核的代码段的段描述符
+	     //DPL_KERNEL为特权级标识，用来控制中断处理的方式
+	     SETGATE(idt[i], 0, GD_KTEXT, __vectors[i], DPL_KERNEL);
+	}
+    //我们希望用户态进行可以产生软中断，从而trap到内核中，因为我们就需要将某个中
+    //断描述符的privilege level设置成用户态
+    SETGATE(idt[T_SWITCH_TOK], 1, GD_KTEXT, __vectors[T_SWITCH_TOK], DPL_USER);
+	     //这里idt_pd之所以叫伪描述符是因为其存了相关中断描述符信息，这个信息与IDTR寄存器相关（即伪描述符的信息是存储在IDTR中的）
+	     //lidt和sidt是操作6字节的操作数，用于设定和存储idt的位置信息
+	lidt(&idt_pd);
+	}
 
 static const char *
 trapname(int trapno) {
@@ -139,7 +158,9 @@ static void
 trap_dispatch(struct trapframe *tf) {
     char c;
 
+	//trapframe中的tf_trapno是中断(异常)号，用来查找IDT的相关索引
     switch (tf->tf_trapno) {
+	//IRQ(Interrupt Request外部中断请求)
     case IRQ_OFFSET + IRQ_TIMER:
         /* LAB1 YOUR CODE : STEP 3 */
         /* handle the timer interrupt */
@@ -147,6 +168,11 @@ trap_dispatch(struct trapframe *tf) {
          * (2) Every TICK_NUM cycle, you can print some info using a funciton, such as print_ticks().
          * (3) Too Simple? Yes, I think so!
          */
+    	ticks++;
+    	if (0 == ticks % TICK_NUM)
+    	{
+    		print_ticks();
+    	}
         break;
     case IRQ_OFFSET + IRQ_COM1:
         c = cons_getc();
@@ -158,8 +184,23 @@ trap_dispatch(struct trapframe *tf) {
         break;
     //LAB1 CHALLENGE 1 : YOUR CODE you should modify below codes.
     case T_SWITCH_TOU:
+        if (tf->tf_cs != USER_CS) //the interrupt request is made by user
+        {
+            cprintf("trap in T_SWITCH_TOU.");
+            tf->tf_cs = USER_CS;
+            tf->tf_ds = tf->tf_es = tf->tf_ss = USER_DS;
+            tf->tf_esp = (uint32_t)tf + sizeof(struct trapframe) - 8;
+            tf->tf_eflags |= FL_IOPL_MASK;
+        }
+        break;
     case T_SWITCH_TOK:
-        panic("T_SWITCH_** ??\n");
+        if (tf->tf_cs != KERNEL_CS)
+        {
+            cprintf("trap in T_SWITCH_TOK.");
+            tf->tf_cs = KERNEL_CS;
+            tf->tf_ds = tf->tf_es = KERNEL_DS;
+            tf->tf_eflags &= ~FL_IOPL_MASK;
+        }
         break;
     case IRQ_OFFSET + IRQ_IDE1:
     case IRQ_OFFSET + IRQ_IDE2:
@@ -184,4 +225,3 @@ trap(struct trapframe *tf) {
     // dispatch based on what type of trap occurred
     trap_dispatch(tf);
 }
-
