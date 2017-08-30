@@ -83,6 +83,7 @@ default_init_memmap(struct Page *base, size_t n) {
         //ref
         set_page_ref(p, 0);
         //flags
+        p->flags = 0; //important. we need clear all bits in flags first
         SetPageProperty(p);
         //property
         p->property = 0;
