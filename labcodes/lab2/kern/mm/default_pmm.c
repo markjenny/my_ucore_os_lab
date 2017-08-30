@@ -7,7 +7,7 @@
    on receiving a request for memory, scans along the list for the first block that is large enough to
    satisfy the request. If the chosen block is significantly larger than that requested, then it is 
    usually split, and the remainder added to the list as another free block.
-   Please see Page 196~198, Section 8.2 of Yan Wei Min's chinese book "Data Structure -- C programming language"
+   Please see Page 196~198, Section 8.2 of Yan Wei Ming's chinese book "Data Structure -- C programming language"
 */
 // LAB2 EXERCISE 1: YOUR CODE
 // you should rewrite functions: default_init,default_init_memmap,default_alloc_pages, default_free_pages.
@@ -65,19 +65,32 @@ default_init(void) {
     nr_free = 0;
 }
 
+/**
+ * @brief: init a free block, the parameter n represent the mount of pages
+ * @param: base  the base address of a block
+ * @param: n     the mount of pages in the block
+ *
+ * @return void
+ * @author lijianlin    date 2017-8-30
+ */
 static void
 default_init_memmap(struct Page *base, size_t n) {
     assert(n > 0);
     struct Page *p = base;
+    /*every page should be inited and inserted in the free_area list*/
     for (; p != base + n; p ++) {
         assert(PageReserved(p));
-        p->flags = p->property = 0;
+        //ref
         set_page_ref(p, 0);
+        //flags
+        SetPageProperty(p);
+        //property
+        p->property = 0;
+        //page_link,add the page into list as a tail-node
+        list_add(&free_list, &(p->page_link));
     }
     base->property = n;
-    SetPageProperty(base);
     nr_free += n;
-    list_add(&free_list, &(base->page_link));
 }
 
 static struct Page *
