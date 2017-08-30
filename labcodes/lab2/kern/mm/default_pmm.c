@@ -94,6 +94,13 @@ default_init_memmap(struct Page *base, size_t n) {
     nr_free += n;
 }
 
+/**
+ * @brief: allocate the pysical memory whose size if n times sizeof(page) 
+ * @param: n    the mount of pages
+ *
+ * @return: NULL represent the kernel can not allocate the physical
+ * memory,otherwise the return value is the base address of allocated memory
+ */
 static struct Page *
 default_alloc_pages(size_t n) {
     assert(n > 0);
@@ -101,25 +108,57 @@ default_alloc_pages(size_t n) {
         return NULL;
     }
     struct Page *page = NULL;
+    //list_head of free_list,
     list_entry_t *le = &free_list;
+    /*if the property is bigger then zero, the pointer p can just move to the
+      next block;the loop below isn't necessary*/
     while ((le = list_next(le)) != &free_list) {
+        /*the whole page*/
         struct Page *p = le2page(le, page_link);
         if (p->property >= n) {
             page = p;
             break;
         }
+        /*the address of the pages is continous which are in the same block,so
+        we can use operator +(n) to move the pointer p*/ 
+        if (0 != p->property) {
+            unsigned int len = p->property; 
+            p += (size_t)(len - 1);
+            //the tail node of the block
+            le = &p->page_link;
+        }
     }
+    
+    /*the page is found*/
     if (page != NULL) {
-        list_del(&(page->page_link));
-        if (page->property > n) {
-            struct Page *p = page + n;
-            p->property = page->property - n;
-            list_add(&free_list, &(p->page_link));
-    }
+        list_entry_t *le_next = NULL;
+        int i;
+        for (i = 0; i < n; i++) {
+            le_next = list_next(le);
+            struct Page *p_tmp = le2page(le, page_link);
+            //process the page
+            ClearPageProperty(p_tmp);
+            SetPageReserved(p_tmp);
+
+            //delete the item in the free_list
+            list_del(le);
+            le = le_next;
+        }
+        //update the block
+        if (page->property > n)
+        {
+            (le2page(le, page_link))->property = page->property - n;
+        }
+
+        page->property = n;
         nr_free -= n;
-        ClearPageProperty(page);
+
+        return page;
     }
-    return page;
+    /*no the page you like*/
+    else {
+        return NULL;
+    }
 }
 
 static void
