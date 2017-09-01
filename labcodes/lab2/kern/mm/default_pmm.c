@@ -100,6 +100,7 @@ default_init_memmap(struct Page *base, size_t n) {
  *
  * @return: NULL represent the kernel can not allocate the physical
  * memory,otherwise the return value is the base address of allocated memory
+ * @author: lijianlin @date: 2017-08-31
  */
 static struct Page *
 default_alloc_pages(size_t n) {
@@ -155,41 +156,92 @@ default_alloc_pages(size_t n) {
 
         return page;
     }
-    /*no the page you like*/
+    /*not the page you wanna*/
     else {
         return NULL;
     }
 }
 
+
+/**
+ * @brief: reclaim the block used by kernel
+ * @param: base     the base address of the block;
+ * @param: n        the mount of pages in the block;
+ *
+ * @return: void
+ * @author: lijianlin @date: 2017-8-31
+ */
 static void
 default_free_pages(struct Page *base, size_t n) {
     assert(n > 0);
+
     struct Page *p = base;
     for (; p != base + n; p ++) {
-        assert(!PageReserved(p) && !PageProperty(p));
-        p->flags = 0;
+        //we should init every page descriptor structure
+       /*the flag must be reserved state because it use by kernel just now*/
+        assert(PageReserved(p));
+        p->flags = 0;/*clear all bits*/
+        SetPageProperty(p);
+        p->property = 0;
         set_page_ref(p, 0);
     }
     base->property = n;
-    SetPageProperty(base);
+
+    //find the right place to store the head page
     list_entry_t *le = list_next(&free_list);
     while (le != &free_list) {
+        //reuse the variable p
         p = le2page(le, page_link);
-        le = list_next(le);
-        if (base + base->property == p) {
-            base->property += p->property;
-            ClearPageProperty(p);
-            list_del(&(p->page_link));
+        if (p > base)
+            break;
+
+        if (0 != p->property)
+        {
+            //jump the tail of the block directly
+            p = p + (p->property - 1);
+            le = &p->page_link;
         }
-        else if (p + p->property == base) {
-            p->property += base->property;
-            ClearPageProperty(base);
-            base = p;
-            list_del(&(p->page_link));
+
+        le = list_next(le);
+    }
+    
+    //add the pages before the variable p
+    for (p = base; p < base + n; p++)
+    {
+        list_add_before(le, &(p->page_link));
+    }
+
+    //make attempt to merge the next block
+   if (le != &free_list) 
+   {
+       p = le2page(le, page_link);
+       if (base + n == p)
+       {
+           base->property += p->property;
+           p->property = 0;
+       }
+   }
+
+    //make attempt to merge the previous block
+    //fresh the le
+    le = list_prev(&base->page_link);
+    p = le2page(le, page_link);
+    if (le != &free_list && p == base -1)
+    {
+        while(le != &free_list)
+        {
+            p = le2page(le, page_link);
+            if (0 != p->property)    //the head page of previous block
+            {
+               p->property += base->property; 
+               base->property = 0;
+               break;
+            }
+            le = list_prev(le);
         }
     }
+
     nr_free += n;
-    list_add(&free_list, &(base->page_link));
 }
 
 static size_t
