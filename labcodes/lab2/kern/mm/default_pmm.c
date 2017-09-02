@@ -146,8 +146,7 @@ default_alloc_pages(size_t n) {
             le = le_next;
         }
         //update the block
-        if (page->property > n)
-        {
+        if (page->property > n) {
             (le2page(le, page_link))->property = page->property - n;
         }
 
@@ -195,8 +194,7 @@ default_free_pages(struct Page *base, size_t n) {
         if (p > base)
             break;
 
-        if (0 != p->property)
-        {
+        if (0 != p->property) {
             //jump the tail of the block directly
             p = p + (p->property - 1);
             le = &p->page_link;
@@ -206,17 +204,14 @@ default_free_pages(struct Page *base, size_t n) {
     }
     
     //add the pages before the variable p
-    for (p = base; p < base + n; p++)
-    {
+    for (p = base; p < base + n; p++) {
         list_add_before(le, &(p->page_link));
     }
 
     //make attempt to merge the next block
-   if (le != &free_list) 
-   {
+   if (le != &free_list) {
        p = le2page(le, page_link);
-       if (base + n == p)
-       {
+       if (base + n == p) {
            base->property += p->property;
            p->property = 0;
        }
@@ -226,13 +221,11 @@ default_free_pages(struct Page *base, size_t n) {
     //fresh the le
     le = list_prev(&base->page_link);
     p = le2page(le, page_link);
-    if (le != &free_list && p == base -1)
-    {
-        while(le != &free_list)
-        {
+    if (le != &free_list && p == base -1) {
+        while(le != &free_list) {
             p = le2page(le, page_link);
-            if (0 != p->property)    //the head page of previous block
-            {
+            //the head page of previous block
+            if (0 != p->property) {
                p->property += base->property; 
                base->property = 0;
                break;
