@@ -314,10 +314,10 @@ bootmain(void) {
     //...
 }
 ```
-上面代码中的readseg函数是从硬盘中读取`SECTSIZE * 8`长度的数据放置到`ELFHDR`这个虚拟地址中，这个时候我就有点搞不清这个`0x10000`的作用了，我的潜意识竟然将它和kernel.ld中的`0x100000`等效成一个东西了，其实这里是不一样，他们的作用是不同的，虾米那我较为详细地阐述一下为什么要使用`0x10000`和`0x100000`；
+上面代码中的readseg函数是从硬盘中读取`SECTSIZE * 8`长度的数据放置到`ELFHDR`这个虚拟地址中，这个时候我就有点搞不清这个`0x10000`的作用了，我的潜意识竟然将它和kernel.ld中的`0x100000`等效成一个东西了，其实这里是不一样，他们的作用是不同的，下面我将较为详细地阐述一下为什么要使用`0x10000`和`0x100000`；
 首先`0x1000`是一个暂存的地址，即我们将从硬盘中读取到的磁盘数据先放置在这个地方，之后再将这些数据和程序加载到他们需要加载的地方(我们知道，在boot的起始阶段中机器代码会从0x7c00处开始执行，而0x7c00向上取个整就是0x10000，并且0x10000-0x7c00之间完全可以放置了一个扇区的数据，这就是我的解释23333)；
 
-在这里马上再解释一下`0x100000`这个数据的作用，这个数据是kernel程序加载程序段的虚拟地址的地方（ 注：程序的加载过程，我觉得《程序员的自我修养》这本书讲的挺仔细的，虚拟地址可以参考一下我的[博客](https://markjenny.github.io/difference_between_virtualaddress_logicaddress_and_linearaddres/) ），我们通过读取kernel文件（eg. readelf kernel）也可以看出来：
+在这里马上再解释一下`0x100000`这个数据的作用，这个数据是kernel程序加载程序段的虚拟地址的地方（ 注：程序的加载过程，我觉得《程序员的自我修养》这本书讲的挺仔细的，虚拟地址可以参考一下我的[博客](https://markjenny.github.io/difference_between_virtualaddress_logicaddress_and_linearaddres/) ），我们通过读取kernel文件（eg. readelf -l kernel）也可以看出来：
 
 ```
 Elf file type is EXEC (Executable file)
@@ -582,3 +582,38 @@ struct pushregs {
   uint32_t reg_eax;
 };
 ```
+
+
+# 附1
+
+现在是2017年9月7日，在思考物理内存管理的时候我思考了一下全局描述符表；然后顺便看了一下ucore课程中的gitbook实验知道书(Lab1-->保护模式和分段机制)中有这样一句话
+
+> 索引（Index）：在描述符表中从8192个描述符中选择一个描述符。处理器自动将这个索引值乘以8（描述符的长度），再加上描述符表的基址来索引描述符表，从而选出一个合适的描述符。
+
+上文中是说明段选择子的意义的，但是这个地发我感觉明显有一个问题就是：为什么处理器自动将这个索引值乘以8？完全不符合道理啊，总给人一种这个8是硬件定死了感觉，但是又不知道为何要定死，所以我在这里说明一下；
+
+首先我们知道一个selector的前13bit是index，后3bit可以直接理解成flag+privilege；比如代码中的用户表示各个段的选择子的值：
+```
+/* global segment number */                                                         
+#define SEG_KTEXT    1                                                              
+#define SEG_KDATA    2                                                              
+#define SEG_UTEXT    3                                                                                                                                                                       
+#define SEG_UDATA    4                                                              
+#define SEG_TSS        5                                                            
+                                                                                    
+/* global descrptor numbers */                                                      
+#define GD_KTEXT    ((SEG_KTEXT) << 3)        // kernel text                        
+#define GD_KDATA    ((SEG_KDATA) << 3)        // kernel data                        
+#define GD_UTEXT    ((SEG_UTEXT) << 3)        // user text                          
+#define GD_UDATA    ((SEG_UDATA) << 3)        // user data                          
+#define GD_TSS        ((SEG_TSS) << 3)        // task segment selector              
+                                                                                    
+#define DPL_KERNEL    (0)                                                           
+#define DPL_USER    (3)                                                             
+                                                                                    
+#define KERNEL_CS    ((GD_KTEXT) | DPL_KERNEL)                                      
+#define KERNEL_DS    ((GD_KDATA) | DPL_KERNEL)                                      
+#define USER_CS        ((GD_UTEXT) | DPL_USER)                                      
+#define USER_DS        ((GD_UDATA) | DPL_USER)   
+```
+可以看到每个global descriptor number都是global segment numer乘以8，和上文中***处理器自动将这个值乘以8***的数值相同，所以这个8明显就是左移三位的意思，因为selector的最后三位还要放置flag+privilege;所以上述代码段的段选择子`KERNEL_CS`，`USER_DS`等如果要想获得他们的index，就要右移3位获取到，而右移3位之后正好就是`SEG_KTEXT`，`SEG_UDATA`这些global segment number，而这些值就是全局描述符表中的索引值，这样就可以准确地通过selector中index找到全局描述符表中的段描述符！
