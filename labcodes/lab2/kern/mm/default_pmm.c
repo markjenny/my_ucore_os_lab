@@ -88,7 +88,7 @@ default_init_memmap(struct Page *base, size_t n) {
         //property
         p->property = 0;
         //page_link,add the page into list as a tail-node
-        list_add(&free_list, &(p->page_link));
+        list_add_before(&free_list, &(p->page_link));
     }
     base->property = n;
     nr_free += n;
