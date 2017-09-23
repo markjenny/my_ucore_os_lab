@@ -404,13 +404,14 @@ get_pte(pde_t *pgdir, uintptr_t la, bool create) {
                           // (7) set page directory entry's permission
     }
     return NULL;          // (8) return page table entry
+
 #endif
-    pde_t pd_entry = pgdir[PDX(la)];
+    pde_t *pd_entry = &pgdir[PDX(la)];
     uintptr_t pg_pa;
     void *pg_kva;
     /*the pd_entry isn't present in the page_directory, so we need to alloc a page as the
     page table*/
-    if (!(pd_entry & PTE_P))
+    if (!(*pd_entry & PTE_P))
     {
         struct Page *pg_tbl = alloc_page();
         if (!create || NULL == pg_tbl)
@@ -424,10 +425,11 @@ get_pte(pde_t *pgdir, uintptr_t la, bool create) {
         pg_kva = page2kva(pg_tbl);
         memset(pg_kva, 0, PGSIZE);
 
-        pd_entry = pg_pa | PTE_P | PTE_W;
+        //we should make the page directory entry visible to user
+        *pd_entry = pg_pa | PTE_P | PTE_W | PTE_U;
     }
 
-    pg_pa = PDE_ADDR(pd_entry);
+    pg_pa = PDE_ADDR(*pd_entry);
     //we need to process data by virtual address
     pg_kva = KADDR(pg_pa);
     return &((pde_t*)pg_kva)[PTX(la)];
