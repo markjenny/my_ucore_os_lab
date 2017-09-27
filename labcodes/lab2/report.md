@@ -116,3 +116,12 @@ prompt# patch lab2/kern/debug/kdebug.c delta
 我觉得我的算法没有什么改进的了，唯一有一点**可能**需要改进的地方就是我的`default_free_pages`这个函数中对要回收的block的所有pages进行了一次loop来恢复每个page之前没有被分配出去时的状态；可能这里在分配出去之后只有head page的相关属性被修改了，其他page的属性没有被修改；这里因为我不知道分配出去之后的情况，所以保险起见我就loop了一次；后来我查看了一下labcodes_answer中的相关代码，发现那个代码没有我写的**高效**，在分配空间时总是一个page一个page的去遍历；
 
    这种一个一个page遍历的方法就会造成每次分配连续内存空间时都会存在O(n)的时间复杂度，但是其实这里时不需要进行单个page的loop，因为每个block的head page中的property属性都是有值的，我们可以首先遍历这些head page，一旦head page中的property字段比要求分配的空间大时，我们就可以将该block中的pages进行拆分；反之，如果head page中的property比要求分配的空间小时，就直接跳到下一个head page上了(*利用head_page + head_page->property的方法直接跳到下一个head_page上*)，这要我们就不用再这些head page后的common page上面再进行判断了，完全没有必要，这是我认为labcodes_answer可以改善的地方；
+   
+---
+# 练习二
+
+首先阐述练习二中我遇到的几个困难点：
+
+1.get_pte函数的调用关系可以通过练习指导书中查看到，此时获取到的物理内存都是在近0x00000000处，因为也就在内核占用的物理内存区域，因为获取到了物理内存之后可以直接通过`page2kva(pg_tbl)`来获取到它的linear address；
+2.我们知道在page table entry中存储的是`physical address | flags`，其实page directory entry中存储的也是`physical address | flags`只不过page directory entry中的physical address是某一个page table的physical address;
+3.对于page table来说，由于这些page table不仅内核会访问，而且用户态也会访问；因此我们就需要将page directory中的page directory entry中添加标志位添加PTE_U字段；
