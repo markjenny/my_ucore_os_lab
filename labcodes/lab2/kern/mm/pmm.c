@@ -420,7 +420,7 @@ get_pte(pde_t *pgdir, uintptr_t la, bool create) {
             return NULL;
         }
 
-        set_page_ref(pg_tbl,1);
+        set_page_ref(pg_tbl, 1);
         pg_pa = page2pa(pg_tbl);
         pg_kva = page2kva(pg_tbl);
         memset(pg_kva, 0, PGSIZE);
@@ -478,6 +478,24 @@ page_remove_pte(pde_t *pgdir, uintptr_t la, pte_t *ptep) {
                                   //(6) flush tlb
     }
 #endif
+    uintptr_t pg_pa;
+    struct Page *page;
+
+    if (*ptep & PTE_P)
+    {
+        pg_pa = PTE_ADDR(*ptep);
+        page = pa2page(pg_pa);
+
+        page_ref_dec(page);
+        if (0 == page->ref)
+        {            
+            free_page(page);
+        }
+
+        memset(ptep, 0, sizeof(pde_t));
+
+        tlb_invalidate(pgdir, la);
+    }
 }
 
 //page_remove - free an Page which is related linear address la and has an validated pte
@@ -489,7 +507,8 @@ page_remove(pde_t *pgdir, uintptr_t la) {
     }
 }
 
-//page_insert - build the map of phy addr of an Page with the linear addr la
+//page_insert - build the map of phy addr of an Page with the linear addr la(将一个物理页
+//进行插入，因此要更新page table的一个表项)
 // paramemters:
 //  pgdir: the kernel virtual base address of PDT
 //  page:  the Page which need to map
