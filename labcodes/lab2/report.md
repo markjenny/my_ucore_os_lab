@@ -221,3 +221,19 @@ __gdtdesc:
 ```
 可以看到他们的base address都变成了`-0xc0000000`了，在完成全部的页式内存管理之后，再通过virtual address来打断点的话就可以准确地停止了；此时各个地址之间的映射关系为`vitrual address - 0xc0000000 == linear address == pyhsical address`了；
 
+* 第三阶段即是设置页映射关系并生效；
+
+首先先创建一个page directory，然后进行linear address到physical address之间的映射，具体的代码如下：
+```
+    boot_map_segment(boot_pgdir, KERNBASE, KMEMSIZE, 0, PTE_W);
+```
+上述函数主要是构建`KERNBASE~KMEMSIZE`之间的虚拟地址到物理地址之间的映射，映射的物理地址为:`0~KERNMEMSIZE-KERNBASE`，之所以这样映射其实是为了当执行第三次的段式更新时(第三次段式更新之后base address为0，那么virtual address和inear address中内核其实地址都是0xc0000000),页式内存管理就可以通过这次的页式管理映射从linear address直接映射到physical address上；
+
+但是需要说明的是，此时如果不做其他处理并且直接生效页式内存管理的话，那么第二是段式内存管理的结果还是存在的，即virtual address需要`-0xc0000000`之后才会变成linear address,然后此时并没有有效的页式映射(有效的页式映射是KERNBASE~KERNMEMSIZE，而linear address在0x00000000~0x10000000之间)，那么页式映射就会出错，所以才需要一个临时的页式内存映射，如下：
+```
+    boot_pgdir[0] = boot_pgdir[PDX(KERNBASE)]; 
+```
+这个临时的页式内存映射可以保证在页式管理生效后到第三次段式管理生效前，可以将linear address准确地映射到physical address上(因为当前的代码段的linear address就是在0~4M之间)，这一步的思想是十分重要的；
+完成了页式映射及临时映射之后就可以生效页式内存管理了，具体就是让CR0寄存器的相应标志位生效：
+··
+* 最后的一步就是生效第三次页式内存管理，对应的函数是`gdt_init`，并将步骤3中临时的页式映射销毁，即是`boot_pgdir[0] = 0;`，至此段页式内存管理全部完成，保证了`virtual address == linear address == physical address + 0xc0000000`，在段式内存管理没有办法丢弃的情况下，将其影响减到最小；
