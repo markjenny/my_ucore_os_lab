@@ -125,3 +125,99 @@ prompt# patch lab2/kern/debug/kdebug.c delta
 1.get_pte函数的调用关系可以通过练习指导书中查看到，此时获取到的物理内存都是在近0x00000000处，因为也就在内核占用的物理内存区域，因为获取到了物理内存之后可以直接通过`page2kva(pg_tbl)`来获取到它的linear address；
 2.我们知道在page table entry中存储的是`physical address | flags`，其实page directory entry中存储的也是`physical address | flags`只不过page directory entry中的physical address是某一个page table的physical address;
 3.对于page table来说，由于这些page table不仅内核会访问，而且用户态也会访问；因此我们就需要将page directory中的page directory entry中添加标志位添加PTE_U字段；
+
+总体来说这个题目还是比较简单的，主要就是先从page directory中找到virtual address对应的page directory entry，如果这个page directory entry并不存在(即其PTE_P位没有使能，当前page directory entry不存在)那么我们就需要从物理内存中拿出一个page来当page table，并将这个page table与page directory entry相关联(关联的方法即使page directory entry中存储该**page table的物理地址及相应的标志位**)；
+一旦获取到了这个page table，那么我们就可以通过virtual address与page directory+page table的关系来获取到该virtual address与page directory+page table之间的关系(**其实这种对应关系是很简单的，一个virtual address的前10位对应page directory entry index，中间10位对应page table entry index，最后12位对应0-4096的单个page偏移，这样就可以保证了一个物理page偏移对应一个逻辑page偏移**)；
+
+改题的总体思路就这样(其实这题早就写完了，只是迟迟没有更新笔记，笔记有益于日后更深入的思考及回忆，所以今天补上,XD)
+
+下面对页式内存管理中的内存映射及段式/页式内存管理生效机制进行一个比较详细的说明与讲解，并于自己日后回忆及更深入的思考(如果有同学看到此报告并能对你产生帮助那就更好不过了，同时如有错误欢迎指出)：
+
+* 首先，在bootloader阶段，首先进行相应的寄存器初始化，使能A20，load GDT，探测物理内存；需要说明一点的是在load GDT之后virutal address和linear address之间是一一映射的关系，具体可以看到bootstrap GDT代码：
+
+
+```
+.data                                                                                                                                                                                        
+# Bootstrap GDT                                                                  
+.p2align 2                                          # force 4 byte alignment     
+gdt:                                                                             
+    SEG_NULLASM                                     # null seg                   
+    SEG_ASM(STA_X|STA_R, 0x0, 0xffffffff)           # code seg for bootloader and kernel
+    SEG_ASM(STA_W, 0x0, 0xffffffff)                 # data seg for bootloader and kernel
+                                                                                 
+gdtdesc:                                                                         
+    .word 0x17                                      # sizeof(gdt) - 1            
+    .long gdt                                       # address gdt  
+```
+
+此时我们只是设定了一个gdt表，并对表项的内存进行书写，此时表项和各个段寄存器其实是没有关系的，有些人会认为只要有了这个gdt并且进行了`lgdt`就完成了段映射(**其实这句话是说给我自己听的==**)；bootloader在设立了gdt之后，还要设置段寄存器的值让其值指向gdt的某个表项才是完成了全部的段式内存管理，如下的代码就是分别将代码段寄存器和数据段寄存器分别设置数值让其指向之前loaded的gdt，这样才是完成了全部的段式内存管理：
+
+```
+    ljmp $PROT_MODE_CSEG, $protcseg                 # 利用ljmp来将PROT_MODE_CSEG赋值给代码段寄存器CS                                                                                             
+    
+.code32                                             # Assemble for 32-bit mode   
+protcseg:                                                                        
+    # Set up the protected-mode data segment registers
+    # 将PROT_MODE_DSEG赋值给数据段寄存器
+    movw $PROT_MODE_DSEG, %ax                       # Our data segment selector  
+    movw %ax, %ds                                   # -> DS: Data Segment        
+    movw %ax, %es                                   # -> ES: Extra Segment       
+    movw %ax, %fs                                   # -> FS                      
+    movw %ax, %gs                                   # -> GS                      
+    movw %ax, %ss                                   # -> SS: Stack Segment  
+```
+通过将具体的index值付给数据段和代码段寄存器之后，就完成了完整的页式内存管理，CD:IP就可以通过CS的值当做gdt的index来读取base address（此阶段是0x0），然后和IP的offset相加作为最后的virtual address；数据段的值同理；
+
+* 接下来是第二阶段，即`call bootmain`之后将扇区上的数据读取到内存上之后，并执行代码段上的entry函数(即kern_entry函数)；
+    
+这个地方其实比较有意思，如果能准确地在kern_entry上面打到断点并且程序运行时可以停止在这里就说明你清晰地知道之前段式内存管理的bases address为`0x00000000`，下面我们一起来尝试一下；
+首先利用qemu来模拟操作系统启动过程，可以去我的lab1的report中查找该方法；我们可以在kern_entry上面打一个断点，然后再在另外一个地方打一个断点，如下所示：
+
+```
+The target architecture is assumed to be i8086                                               
+(gdb) target remote 127.0.0.1:1234                                                  
+Remote debugging using 127.0.0.1:1234                                               
+0x0000fff0 in ?? ()                                                                 
+(gdb) file ./bin/kernel                                                             
+A program is being debugged already.                                                
+Are you sure you want to change the file? (y or n) y                                
+Reading symbols from ./bin/kernel...done.                                           
+(gdb) b kern_entry                                                                  
+Breakpoint 1 at 0xc0100000: file kern/init/entry.S, line 11.                        
+(gdb) b *0x00100000                                                                 
+Breakpoint 2 at 0x100000                                                            
+(gdb) continue                                                                      
+Continuing.                                                                         
+                                                                                    
+Breakpoint 2, 0x00100000 in ?? ()                                                   
+(gdb) x /10i $pc                                                                    
+=> 0x100000:    lgdtw  (%di)                                                        
+   0x100003:    sbb    %dh,0x11(%bx,%si)                                            
+   0x100006:    add    %bh,0x10(%bx,%si)                                            
+   0x10000a:    add    %al,(%bx,%si)                                                
+   0x10000c:    mov    %ax,%ds                                                      
+   0x10000e:    mov    %ax,%es                                                      
+   0x100010:    mov    %ax,%ss                                                      
+   0x100012:    ljmp   $0xc010,$0x19                                                
+   0x100017:    or     %al,(%bx,%si)                                                
+   0x100019:    mov    $0x0,%bp                                                     
+(gdb)
+```
+如上我们可以看到，gdb竟然在2号断点上停止了，而2号断点和1号断点的逻辑地址位置就是相差了`0xc0000000`，这是为什么呢？
+
+**主要时因为此时的段式内存管理采用的base address仍然时0x00000000，并且bootloader在放置代码段和数据段的时候的基础起始物理地址是0x00000000而不是0xc0000000，所以我们在virtual address的0x00100000上打断点时，就相当于在物理地址的0x00100000上打上了断点因此在congtinue时就会停止，而之所以没有在0xc0100000上停止时因为代码段并没有在物理内存0xc0100000上有任何代码，也就不会停止**
+
+在进入kern_entry后，有一次进行了和步骤1中一样的load global descriptor table的动作，只不过gdt变成了如下的样子：
+
+```
+.align 4                                                                            
+__gdt:                                                                              
+    SEG_NULL                                                                        
+    SEG_ASM(STA_X | STA_R, - KERNBASE, 0xFFFFFFFF)      # code segment              
+    SEG_ASM(STA_W, - KERNBASE, 0xFFFFFFFF)              # data segment              
+__gdtdesc:                                                                          
+    .word 0x17                                          # sizeof(__gdt) - 1         
+    .long REALLOC(__gdt) 
+```
+可以看到他们的base address都变成了`-0xc0000000`了，在完成全部的页式内存管理之后，再通过virtual address来打断点的话就可以准确地停止了；此时各个地址之间的映射关系为`vitrual address - 0xc0000000 == linear address == pyhsical address`了；
+
