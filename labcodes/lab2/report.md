@@ -5,10 +5,15 @@
 
 那么就先说一下我的做法；
 
-首先，我是直接比较了kern文件夹下所有不同的文件，因为在lab1中我主要修改的就是kern下的代码；因为文件夹下还有子文件夹，所以我们要采用递归的方式来进行调用，所以需要加上-r --brief参数，具体如下：
+首先，我是直接比较了kern文件夹下所有不同的文件，因为在lab1中我主要修改的就是kern下的代码；因为文件夹下还有子文件夹，所以我们要采用递归的方式来进行调用，所以需要加上-r参数，具体如下：
 ```
 prompt# diff -r lab2/kern/ lab1/kern/ > changelist
 ```
+其中，需要注意的是上述命令是分析数/lab2/kern/和lab1/kern/下**所有文件的具体内容差别**，如果只是想获取到这两个文件夹下哪些文件有差别，那么需要添加`--brief`参数，即简明扼要地表达出这两个文件夹下哪些文件不同，具体参数如下：
+```
+prompt# diff -r --brief lab2/kern/ lab1/kern/ > changelist
+```
+
 这样就会将kern文件夹下的所有不同的文件都输出出来，我是将这些不同的文件都进行了一个输出，并把他们都放置到changelist中；具体的差别如下
 ```
 Files lab1/kern/debug/kdebug.c and lab2/kern/debug/kdebug.c differ
