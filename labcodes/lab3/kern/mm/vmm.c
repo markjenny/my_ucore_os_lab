@@ -301,6 +301,11 @@ volatile unsigned int pgfault_num=0;
  *         -- The U/S flag (bit 2) indicates whether the processor was executing at user mode (1)
  *            or supervisor mode (0) at the time of the exception.
  */
+/*
+ * 当产生中断缺页时，已将会首先产生中断信号(信号中含有中断号，并且从CR2寄存器中可以获取到
+ * CPU想要访问的逻辑地址空间，中断错误码表明了产生的page fault是什么原因：not-present page
+ * or no Write/Read right or user mode/supervisor mode)
+ */
 int
 do_pgfault(struct mm_struct *mm, uint32_t error_code, uintptr_t addr) {
     int ret = -E_INVAL;
@@ -313,10 +318,10 @@ do_pgfault(struct mm_struct *mm, uint32_t error_code, uintptr_t addr) {
         cprintf("not valid addr %x, and  can not find it in vma\n", addr);
         goto failed;
     }
-    //check the error_code
-    switch (error_code & 3) {
+    //check the error_code(if the W/R=1 or W/R represent the write error and read error
+    //respectively)
+    switch (error_code & 3) { /* error code flag : default is 3 ( W/R=1, P=1): write, present */
     default:
-            /* error code flag : default is 3 ( W/R=1, P=1): write, present */
     case 2: /* error code flag : (W/R=1, P=0): write, not present */
         if (!(vma->vm_flags & VM_WRITE)) {
             cprintf("do_pgfault failed: error code flag = write AND not present, but the addr's vma cannot write\n");
@@ -332,6 +337,8 @@ do_pgfault(struct mm_struct *mm, uint32_t error_code, uintptr_t addr) {
             goto failed;
         }
     }
+    //note: the non_existed addr means the physical address is non_existed but the virtual
+    //memory address is existed
     /* IF (write an existed addr ) OR
      *    (write an non_existed addr && addr is writable) OR
      *    (read  an non_existed addr && addr is readable)
@@ -346,7 +353,7 @@ do_pgfault(struct mm_struct *mm, uint32_t error_code, uintptr_t addr) {
 
     ret = -E_NO_MEM;
 
-    pte_t *ptep=NULL;
+    pte_t *ptep = NULL;
     /*LAB3 EXERCISE 1: YOUR CODE
     * Maybe you want help comment, BELOW comments can help you finish the code
     *
@@ -396,6 +403,11 @@ do_pgfault(struct mm_struct *mm, uint32_t error_code, uintptr_t addr) {
         }
    }
 #endif
+    /*my codes*/
+    ptep = get_pte(mm->pgdir, addr, 1); //'1' represent we wiil create the page table if it does not exist
+    if (0 == *ptep) {
+        pgdir_alloc_page(mm->pgdir, addr, perm);
+    }
    ret = 0;
 failed:
     return ret;
