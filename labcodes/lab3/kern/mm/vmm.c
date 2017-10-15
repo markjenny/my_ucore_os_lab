@@ -405,8 +405,42 @@ do_pgfault(struct mm_struct *mm, uint32_t error_code, uintptr_t addr) {
 #endif
     /*my codes*/
     ptep = get_pte(mm->pgdir, addr, 1); //'1' represent we wiil create the page table if it does not exist
+
+    if (NULL == ptep)
+    {
+        cprintf("call get_pte failed in do_pgfault.\n");    
+        goto failed;
+    }
+
     if (0 == *ptep) {
-        pgdir_alloc_page(mm->pgdir, addr, perm);
+        if (NULL == pgdir_alloc_page(mm->pgdir, addr, perm))
+        {
+           cprintf("call pgdir_alloc_page failed in do_pgfault.\n");
+           goto failed;
+        }
+    }
+    else {
+        if (swap_init_ok) {
+            struct Page *page = NULL;
+            //uintptr_t phy_addr;
+            ret = swap_in(mm, addr, &page);
+            if (0 != ret)
+            {
+                cprintf("call swap_in failed in do_pgfault.\n");
+                goto failed;
+            }
+            
+            //now the page table entry is converted to real page table entry from
+            //swap_entry
+            //phy_addr = page2pa(page);
+            page_insert(mm->pgdir, page, addr, perm);
+            //*ptep = phy_addr | PTE_P | perm;   
+
+            swap_map_swappable(mm, addr, page, 0);
+        }
+        else {
+            cprintf("no swap_init_ok but ptep is %x, failed\n, *ptep");
+        }
     }
    ret = 0;
 failed:
