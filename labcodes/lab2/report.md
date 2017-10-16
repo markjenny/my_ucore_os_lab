@@ -36,7 +36,7 @@ Only in lab2/kern/: sync
 Files lab1/kern/trap/trap.c and lab2/kern/trap/trap.c differ
 Files lab1/kern/trap/trap.h and lab2/kern/trap/trap.h differ
 ```
-那我我们就口蹄疫通过上述的文本看到哪些文件是不同的；首先理解我们自己的需求：我们是需要将lab1中新添加的代码合入到lab2中；因此像那些只存在lab2中的不同我们就不用关心了；如上面的文本所示，我们可以发现kdebug.c这个文件二者是不同的，那么我们可以diff一下这两个文件看看具体有什么不同：
+那我我们就可以通过上述的文本看到哪些文件是不同的；首先理解我们自己的需求：我们是需要将lab1中新添加的代码合入到lab2中；因此像那些只存在lab2中的不同我们就不用关心了；如上面的文本所示，我们可以发现kdebug.c这个文件二者是不同的，那么我们可以diff一下这两个文件看看具体有什么不同：
 ```
 6,9d5
 < #include <sync.h>
@@ -86,11 +86,11 @@ Files lab1/kern/trap/trap.h and lab2/kern/trap/trap.h differ
 > 	return;
 
 ```
-这里需要插嘴一句的是，我们在使用diff命令的时候，如果你像通过patch来让a变成b，那么在diff的时候就使用`diff a b > delta`，这样delta中就回存储两个文件的不同，之后再使用`patch a c`时就可以让a通过补丁c变成b；了解了这个diff和patch中参数位置带来的具体效果后，我们就可以通过这种方法来填补上lab1中含有的但是lab2中不含有的代码了；
+这里需要插嘴一句的是，我们在使用diff命令的时候，如果你像通过patch来让a变成b，那么在diff的时候就使用`diff a b > delta`，这样delta中就回存储两个文件的不同，之后再使用`patch a delta`时就可以让a通过补丁delta变成b；了解了这个diff和patch中参数位置带来的具体效果后，我们就可以通过这种方法来填补上lab1中含有的但是lab2中不含有的代码了；
 
 因为我们想让lab2中含有lab1拥有的代码，那么其实就可以理解成我们想让部分代码变成lab1中的样子，因为我们就需要将上文中讲到的`diff a b`中`a`的位置替换成`lab2/kern/debug/kdebug.c`，将`b`中的位置替换成`lab1/kern/debug/kdebug.c`，并将不同输出到delta文件中；delta文件中存放的就是上一个代码段中显示的内容；
 
-仔细观察我们可以发现，lab1下的这个文件并不是完全比lan2下的这个文件多的，kdebug-lab2中包含了更多的头文件信息，所以我们并不能将这个delta用作回复的完整文件，因为那样的话patch了之后就是一个单纯的kdebug-lab1了，而lab2新增的很多代码就没有了，这样的patch没有意义；因为我们将delta文件中，kdebug-lab2自身拥有的那部分去掉，即上文的`6,9d5`和`11,12d6`后面对应的代码去掉，这样剩下的就是kdebug-lab1中比kdebug-lab2中完全新增的东西，这个时候执行如下命令：
+仔细观察我们可以发现，lab1下的这个文件并不是完全比lan2下的这个文件多的，kdebug-lab2中包含了更多的头文件信息，所以我们并不能将这个delta用作恢复的完整文件，因为那样的话patch了之后就是一个单纯的kdebug-lab1了，而lab2新增的很多代码就没有了，这样的patch没有意义；因为我们将delta文件中，kdebug-lab2自身拥有的那部分去掉，即上文的`6,9d5`和`11,12d6`后面对应的代码去掉，这样剩下的就是kdebug-lab1中比kdebug-lab2中完全新增的东西，这个时候执行如下命令：
 ```
 prompt# patch lab2/kern/debug/kdebug.c delta
 ```
