@@ -4,7 +4,64 @@
 一般如果是有可视化界面的linux系统的话还是推荐使用meld，效率要高一些；但是对于无法使用的可视化的工具的情况，还是可以使用一下淳朴的`diff`和`patch`工具应对一下。
 
 ---
-# challenge 
+
+# 练习1
+
+这个练习题主要是为了测试在用户进程中出现页错误中断时应如何进行处理(但是现在都是在内核中进行模拟的)；
+由于`do_pgfault`函数稍微优点长，直接摆出来会影响阅读效果，我将边阐述边对代码进行分析；
+
+当产生页错误时，证明进程想访问的物理页是不存在的，也就是page table中的page table entry中的值并不能推断出一个物理页的存在，此时的pte的内容有两种情况：
+* `uintptr_t` pte = 0，即page table entry中是没有内容的；那么就说明**虚拟内存页**还没有载入过代码或是数据(如果之前载入过代码那么这个pte就是一个swap entry);此时的操作就直接申请一个物理内存页并构建pte及快表即可。代码如下：
+```
+if (0 == *ptep) {                                                            
+        if (NULL == pgdir_alloc_page(mm->pgdir, addr, perm))                     
+        {                                                                        
+           cprintf("call pgdir_alloc_page failed in do_pgfault.\n");             
+           goto failed;                                                          
+        }                                                                        
+    }
+```
+
+* `uintptr_t` pte != 0,即page table entry中有内容，但是不是物理页的物理地址;**那么这个pte中存储的是什么值呢？**，答存储的是swap entry中的内容，用来映射交换分区中存储的指令或者数据。代码如下：
+```
+    else {                                                                       
+        if (swap_init_ok) {                                                      
+            struct Page *page = NULL;                                            
+            //uintptr_t phy_addr;                                                
+            ret = swap_in(mm, addr, &page);                                      
+            if (0 != ret)                                                        
+            {                                                                    
+                cprintf("call swap_in failed in do_pgfault.\n");                 
+                goto failed;                                                     
+            }                                                                    
+                                                                                 
+            //now the page table entry is converted to real page table entry from
+            //swap_entry                                                         
+            //phy_addr = page2pa(page);                                          
+            page_insert(mm->pgdir, page, addr, perm);                            
+            //*ptep = phy_addr | PTE_P | perm;                                   
+                                                                                 
+            swap_map_swappable(mm, addr, page, 0);                               
+        }                                                                        
+        else {                                                                   
+            cprintf("no swap_init_ok but ptep is %x, failed\n, *ptep");          
+        }                                                                        
+    }       
+```
+
+通过每个进程建立一个page directory来维护一个虚拟地址空间，如果某个虚拟地址初次访问的时产生`page fault`，那么就直接创建一个物理页并填充pte及相应的快表即可；如果某个虚拟地址访问出现`page fault`但是其linear address对应的pte其实是有值的，那么这个值就是**swap entry**，这是因为我们采用虚拟内存管理，就需要及时地将某些暂时不使用的物理内存页还给操作系统，但是为了后期还能继续使用这个物理页上的数据(毕竟一个程序的指令或者数据都是可以并可能重复使用的)，我们就将这个物理页上的数据暂时存放在磁盘空间上。
+
+但是放置到磁盘上了之后，怎么才能在下次可以快速地找到这个页的所有数据呢，这个时候就**要重复利用一个pte了**,为了下次这个linear address产生`page fault`时可以继续读取原来的数据（这里我们假定这个数据当时时存储在了交换分区的`n~n+7`个sector上，因为一个页为4KB，一个sector为512B，因此一个页相当于8个sector），我们在pte中存储交换分区中这个`n`值，下次再缺页时通过这个pte上的offset值就可以直接准确地将数据从磁盘上写回物理内存上；
+
+本题中还有一个问题：
+> 如果ucore的缺页服务例程在执行过程中访问内存，出现了页访问异常，请问硬件要做哪些事情？
+
+首先出现了页异常，即CPU读取物理内存时出现错误；这个时候中断控制器会向总线上发送中断信号；CPU在执行完一个指令后开始读取中断信号，获取到中断index及相应的error code信息等；接下来，CPU会将相应的error code及寄存器状态等存储在trapframe中，并根据异常对应向量值去IDT中寻找中断描述符；中断描述符中存储着中断例程对应的selector和offset，通过这两个值将CS：EIP定位到中断服务例程上，也就是我们的`do_pgfault`上进行后续处理。
+
+其实这道题和之前我们讲的中断知识有关；
+---
+# 
+challenge 
 
 挑战题还是先放置在此，当全部基础题完成后在全部一一攻破；
 
