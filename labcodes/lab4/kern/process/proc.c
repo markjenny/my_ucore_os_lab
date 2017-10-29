@@ -75,6 +75,7 @@ struct proc_struct *initproc = NULL;
 // current proc
 struct proc_struct *current = NULL;
 
+//the count of not run process
 static int nr_process = 0;
 
 void kernel_thread_entry(void);
@@ -260,6 +261,7 @@ copy_mm(uint32_t clone_flags, struct proc_struct *proc) {
 //             - setup the kernel entry point and stack of process
 static void
 copy_thread(struct proc_struct *proc, uintptr_t esp, struct trapframe *tf) {
+    //the '1' below represent one pointer of trapframe
     proc->tf = (struct trapframe *)(proc->kstack + KSTACKSIZE) - 1;
     *(proc->tf) = *tf;
     proc->tf->tf_regs.reg_eax = 0;
@@ -308,6 +310,45 @@ do_fork(uint32_t clone_flags, uintptr_t stack, struct trapframe *tf) {
     //    5. insert proc_struct into hash_list && proc_list
     //    6. call wakeup_proc to make the new child process RUNNABLE
     //    7. set ret vaule using child proc's pid
+    /*my codes*/
+    proc = alloc_proc();
+    if (NULL == proc)
+    {
+        cprintf("Out of memory to call alloc_proc in do_fork."); 
+        goto fork_out;
+    }
+
+    setup_kstack(proc);
+    if (0 == proc->kstack)
+    {
+        cprintf("Out of memory to call setup_kstack in do_fork."); 
+        goto bad_fork_cleanup_proc;
+    }
+
+    if(copy_mm(clone_flags, proc))
+    {
+        cprintf("copy mm_struct failed in do_fork");
+        goto bad_fork_cleanup_kstack;
+    }
+    
+    //create the trapfram and context which the **thread** needs.
+    copy_thread(proc, stack, tf);
+
+    //refer to the answer of labcodes_answer, i really know nothing to mask interrupt;
+    bool intr_flag;
+    local_intr_save(intr_flag);
+    {
+        proc->pid = get_pid();
+        hash_proc(proc);
+        list_add(&proc_list, &proc->list_link);
+        nr_process++;
+    }
+    local_intr_restore(intr_flag);
+
+    //makes the process runnable
+    wakeup_proc(proc);
+
+    ret = proc->pid;
 fork_out:
     return ret;
 
