@@ -102,6 +102,18 @@ alloc_proc(void) {
      *       uint32_t flags;                             // Process flag
      *       char name[PROC_NAME_LEN + 1];               // Process name
      */
+        proc->state = PROC_UNINIT;
+        proc->pid = -1;
+        proc->runs = 0;
+        proc->kstack = 0;   //the linear address of the stack
+        proc->need_resched = 0; //can not use the `false` because of undefined
+        proc->parent = NULL;
+        proc->mm = NULL;    //the kernel process(thread accurately) doesn't use it
+        memset(&proc->context, 0, sizeof(struct context));
+        proc->tf = NULL;
+        proc->flags = 0;    //what is the meanig of process flag        
+        proc->cr3 = boot_cr3;
+        memset(proc->name, 0, PROC_NAME_LEN + 1);
     }
     return proc;
 }
@@ -340,9 +352,10 @@ proc_init(void) {
     }
 
     idleproc->pid = 0;
-    idleproc->state = PROC_RUNNABLE;
     idleproc->kstack = (uintptr_t)bootstack;
-    idleproc->need_resched = 1;
+    //if other process exit in the runnable queue, the idle process can be 
+    //scheduled right now.
+    idleproc->need_resched = 1; 
     set_proc_name(idleproc, "idle");
     nr_process ++;
 
