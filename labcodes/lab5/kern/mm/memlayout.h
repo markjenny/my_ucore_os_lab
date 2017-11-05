@@ -69,7 +69,9 @@
 /* All physical memory mapped at this address */
 #define KERNBASE            0xC0000000
 #define KMEMSIZE            0x38000000                  // the maximum amount of physical memory
-#define KERNTOP             (KERNBASE + KMEMSIZE)
+//the virtual address between the KERNBASE and KERNTOP is mapped on physical
+//address directly
+#define KERNTOP             (KERNBASE + KMEMSIZE)     
 
 /* *
  * Virtual page table. Entry PDX[VPT] in the PD (Page Directory) contains

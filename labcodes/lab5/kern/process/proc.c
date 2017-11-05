@@ -76,6 +76,7 @@ struct proc_struct *initproc = NULL;
 // current proc
 struct proc_struct *current = NULL;
 
+//the count of not run process
 static int nr_process = 0;
 
 void kernel_thread_entry(void);
@@ -109,6 +110,18 @@ alloc_proc(void) {
      *       uint32_t wait_state;                        // waiting state
      *       struct proc_struct *cptr, *yptr, *optr;     // relations between processes
 	 */
+        proc->state = PROC_UNINIT;
+        proc->pid = -1;
+        proc->runs = 0;
+        proc->kstack = 0;   //the linear address of the stack
+        proc->need_resched = 0; //can not use the `false` because of undefined
+        proc->parent = NULL;
+        proc->mm = NULL;    //the kernel process(thread accurately) doesn't use it
+        memset(&proc->context, 0, sizeof(struct context));
+        proc->tf = NULL;
+        proc->flags = 0;    //what is the meanig of process flag        
+        proc->cr3 = boot_cr3;
+        memset(proc->name, 0, PROC_NAME_LEN + 1);
     }
     return proc;
 }
@@ -347,6 +360,7 @@ bad_mm:
 //             - setup the kernel entry point and stack of process
 static void
 copy_thread(struct proc_struct *proc, uintptr_t esp, struct trapframe *tf) {
+    //the '1' below represent one pointer of trapframe
     proc->tf = (struct trapframe *)(proc->kstack + KSTACKSIZE) - 1;
     *(proc->tf) = *tf;
     proc->tf->tf_regs.reg_eax = 0;
@@ -404,6 +418,45 @@ do_fork(uint32_t clone_flags, uintptr_t stack, struct trapframe *tf) {
 	*    update step 5: insert proc_struct into hash_list && proc_list, set the relation links of process
     */
 	
+    /*my codes*/
+    proc = alloc_proc();
+    if (NULL == proc)
+    {
+        cprintf("Out of memory to call alloc_proc in do_fork."); 
+        goto fork_out;
+    }
+
+    setup_kstack(proc);
+    if (0 == proc->kstack)
+    {
+        cprintf("Out of memory to call setup_kstack in do_fork."); 
+        goto bad_fork_cleanup_proc;
+    }
+
+    if(copy_mm(clone_flags, proc))
+    {
+        cprintf("copy mm_struct failed in do_fork");
+        goto bad_fork_cleanup_kstack;
+    }
+    
+    //create the trapfram and context which the **thread** needs.
+    copy_thread(proc, stack, tf);
+
+    //refer to the answer of labcodes_answer, i really know nothing to mask interrupt;
+    bool intr_flag;
+    local_intr_save(intr_flag);
+    {
+        proc->pid = get_pid();
+        hash_proc(proc);
+        list_add(&proc_list, &proc->list_link);
+        nr_process++;
+    }
+    local_intr_restore(intr_flag);
+
+    //makes the process runnable
+    wakeup_proc(proc);
+
+    ret = proc->pid;
 fork_out:
     return ret;
 
@@ -615,7 +668,7 @@ bad_mm:
     goto out;
 }
 
-// do_execve - call exit_mmap(mm)&put_pgdir(mm) to reclaim memory space of current process
+// do_execve - call exit_mmap(mm)&pug_pgdir(mm) to reclaim memory space of current process
 //           - call load_icode to setup new memory space accroding binary prog.
 int
 do_execve(const char *name, size_t len, unsigned char *binary, size_t size) {
@@ -825,7 +878,9 @@ proc_init(void) {
     idleproc->pid = 0;
     idleproc->state = PROC_RUNNABLE;
     idleproc->kstack = (uintptr_t)bootstack;
-    idleproc->need_resched = 1;
+    //if other process exit in the runnable queue, the idle process can be 
+    //scheduled right now.
+    idleproc->need_resched = 1; 
     set_proc_name(idleproc, "idle");
     nr_process ++;
 

@@ -7,6 +7,8 @@
 #include <sync.h>
 #include <vmm.h>
 #include <proc.h>
+#include <kmonitor.h>
+#include <assert.h>
 #include <kdebug.h>
 #include <kmonitor.h>
 #include <assert.h>
@@ -347,5 +349,42 @@ print_stackframe(void) {
       *           NOTICE: the calling funciton's return addr eip  = ss:[ebp+4]
       *                   the calling funciton's ebp = ss:[ebp]
       */
+	//print the important info of register ebp and esp
+	uint32_t ebp_value;	//the value is the address of ebp register
+	uint32_t eip_value;
+	uint32_t argu_count = 4;
+
+	ebp_value = read_ebp();
+	eip_value = read_eip(); 
+	
+	uint32_t i, j;
+
+	for (i = 0; i < STACKFRAME_DEPTH; i++)
+	{
+		cprintf("ebp:0x%08x eip:0x%08x ", ebp_value, eip_value);
+		//using the uint32_t in order to simulated the addres of 32-bit
+		//after the ebp register is [return address], and then calling function's arguments
+		cprintf("args: ");
+		uint32_t *argu_addr = (uint32_t*)ebp_value + 2;
+		for (j = 0; j < argu_count; j++)	
+		{
+			cprintf("0x%08x ", argu_addr[j]);	
+		}
+		cprintf("\n");
+		print_debuginfo(eip_value - 1);
+		
+		//to resolve the [error: invalid type argument of unary ‘*’] problem: convert the type of eip_value/ebp_value to [uint32_t*]
+		eip_value = *((uint32_t*)ebp_value + 1);//when the eip points to the return address, [pop arguments] will exec;
+		ebp_value = *(uint32_t*)ebp_value; 
+		//eip_value = ((uint32_t*)ebp_value)[1];		//because the value of ebp_value is address, so we can use uin32_t* to convert
+		//ebp_value = ((uint32_t*)ebp_value)[0];
+
+
+		cprintf("ebp:0x%08x ", ebp_value);
+		cprintf("eip:0x%08x \n", eip_value);
+	}
+
+
+	return;
 }
 
