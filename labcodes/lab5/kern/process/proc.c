@@ -297,6 +297,9 @@ setup_pgdir(struct mm_struct *mm) {
         return -E_NO_MEM;
     }
     pde_t *pgdir = page2kva(page);
+    /**the boot_pgdir only restore the kernel virtual address, 
+     *so we can copy the whole page. 
+     **/
     memcpy(pgdir, boot_pgdir, PGSIZE);
     pgdir[PDX(VPT)] = PADDR(pgdir) | PTE_P | PTE_W;
     mm->pgdir = pgdir;
@@ -530,6 +533,7 @@ do_exit(int error_code) {
  */
 static int
 load_icode(unsigned char *binary, size_t size) {
+    // we need to create user mm_struct ,so the mm must be empty
     if (current->mm != NULL) {
         panic("load_icode: current->mm must be empty.\n");
     }
@@ -557,6 +561,7 @@ load_icode(unsigned char *binary, size_t size) {
     }
 
     uint32_t vm_flags, perm;
+    // TODO : what's the meaning of **number of entries in program header**
     struct proghdr *ph_end = ph + elf->e_phnum;
     for (; ph < ph_end; ph ++) {
     //(3.4) find every program section headers
@@ -655,6 +660,13 @@ load_icode(unsigned char *binary, size_t size) {
      *          tf_eip should be the entry point of this binary program (elf->e_entry)
      *          tf_eflags should be set to enable computer to produce Interrupt
      */
+    /*mycodes*/
+    tf->tf_cs = USER_CS;
+    tf->tf_es = tf->tf_ds = tf->tf_ss = USER_DS;
+    tf->tf_esp = USTACKTOP;
+    tf->tf_eip = elf->e_entry;
+    tf->tf_eflags = tf->tf_eflags | FL_IF;
+
     ret = 0;
 out:
     return ret;
