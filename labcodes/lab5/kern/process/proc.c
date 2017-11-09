@@ -429,6 +429,11 @@ do_fork(uint32_t clone_flags, uintptr_t stack, struct trapframe *tf) {
         goto fork_out;
     }
 
+    proc->parent = current;
+    //if the parent process is going to exit before their child process, the
+    //wait_state must be assigned to WT_CHILD
+    proc->wait_state = 0;
+
     setup_kstack(proc);
     if (0 == proc->kstack)
     {
@@ -451,8 +456,11 @@ do_fork(uint32_t clone_flags, uintptr_t stack, struct trapframe *tf) {
     {
         proc->pid = get_pid();
         hash_proc(proc);
+        /**set_link contain the functions below
         list_add(&proc_list, &proc->list_link);
         nr_process++;
+        **/
+        set_links(proc);
     }
     local_intr_restore(intr_flag);
 

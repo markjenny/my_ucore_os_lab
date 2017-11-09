@@ -556,20 +556,20 @@ exit_range(pde_t *pgdir, uintptr_t start, uintptr_t end) {
  * CALL GRAPH: copy_mm-->dup_mmap-->copy_range
  */
 int
-copy_range(pde_t *to, pde_t *from, uintptr_t start, uintptr_t end, bool share) {
+copy_range(pde_t *to_pgdir, pde_t *from_pgdir, uintptr_t start, uintptr_t end, bool share) {
     assert(start % PGSIZE == 0 && end % PGSIZE == 0);
     assert(USER_ACCESS(start, end));
     // copy content by page unit.
     do {
         //call get_pte to find process A's pte according to the addr start
-        pte_t *ptep = get_pte(from, start, 0), *nptep;
+        pte_t *ptep = get_pte(from_pgdir, start, 0), *nptep;
         if (ptep == NULL) {
             start = ROUNDDOWN(start + PTSIZE, PTSIZE);
             continue ;
         }
         //call get_pte to find process B's pte according to the addr start. If pte is NULL, just alloc a PT
         if (*ptep & PTE_P) {
-            if ((nptep = get_pte(to, start, 1)) == NULL) {
+            if ((nptep = get_pte(to_pgdir, start, 1)) == NULL) {
                 return -E_NO_MEM;
             }
         uint32_t perm = (*ptep & PTE_USER);
@@ -594,6 +594,10 @@ copy_range(pde_t *to, pde_t *from, uintptr_t start, uintptr_t end, bool share) {
          * (3) memory copy from src_kvaddr to dst_kvaddr, size is PGSIZE
          * (4) build the map of phy addr of  nage with the linear addr start
          */
+        uintptr_t src_kvaddr = (uintptr_t)page2kva(page);
+        uintptr_t dst_kvaddr = (uintptr_t)page2kva(npage);
+        memcpy((void*)dst_kvaddr, (void*)src_kvaddr, PGSIZE);
+        ret = page_insert(to_pgdir, npage, start, perm);
         assert(ret == 0);
         }
         start += PGSIZE;
