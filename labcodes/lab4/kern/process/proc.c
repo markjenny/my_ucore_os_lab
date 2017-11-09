@@ -317,6 +317,7 @@ do_fork(uint32_t clone_flags, uintptr_t stack, struct trapframe *tf) {
         cprintf("Out of memory to call alloc_proc in do_fork."); 
         goto fork_out;
     }
+    proc->parent = current;
 
     setup_kstack(proc);
     if (0 == proc->kstack)
