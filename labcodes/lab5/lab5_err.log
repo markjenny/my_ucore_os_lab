@@ -1,0 +1,289 @@
+[~/moocos/ucore_lab/labcodes/lab5]
+moocos-> make qemu
+(THU.CST) os is loading ...
+
+Special kernel symbols:
+  entry  0xc010002a (phys)
+  etext  0xc010be7b (phys)
+  edata  0xc019bf2a (phys)
+  end    0xc019f0b8 (phys)
+Kernel executable memory footprint: 637KB
+ebp:0xc0129f38 eip:0xc0100af1 args: 0x00010094 0x00000000 0xc0129f68 0xc01000d3 
+    kern/debug/kdebug.c:358: print_stackframe+28
+ebp:0xc0129f48 eip:0xc0100e0f 
+ebp:0xc0129f48 eip:0xc0100e0f args: 0x00000000 0x00000000 0x00000000 0xc0129fb8 
+    kern/debug/kmonitor.c:129: mon_backtrace+10
+ebp:0xc0129f68 eip:0xc01000d3 
+ebp:0xc0129f68 eip:0xc01000d3 args: 0x00000000 0xc0129f90 0xffff0000 0xc0129f94 
+    kern/init/init.c:58: grade_backtrace2+33
+ebp:0xc0129f88 eip:0xc01000fc 
+ebp:0xc0129f88 eip:0xc01000fc args: 0x00000000 0xffff0000 0xc0129fb4 0x0000002a 
+    kern/init/init.c:63: grade_backtrace1+38
+ebp:0xc0129fa8 eip:0xc010011a 
+ebp:0xc0129fa8 eip:0xc010011a args: 0x00000000 0xc010002a 0xffff0000 0x0000001d 
+    kern/init/init.c:68: grade_backtrace0+23
+ebp:0xc0129fc8 eip:0xc010013f 
+ebp:0xc0129fc8 eip:0xc010013f args: 0xc010be9c 0xc010be80 0x0000318e 0x00000000 
+    kern/init/init.c:73: grade_backtrace+34
+ebp:0xc0129ff8 eip:0xc010007f 
+ebp:0xc0129ff8 eip:0xc010007f args: 0x00000000 0x00000000 0x0000ffff 0x40cf9a00 
+    kern/init/init.c:33: kern_init+84
+ebp:0x00000000 eip:0xc0100028 
+ebp:0x00000000 eip:0xc0100028 args: 0x00000000 0x00000000 0x00000000 0x00000000 
+    kern/init/entry.S:27: <unknown>+0
+ebp:0x00000000 eip:0x00000000 
+ebp:0x00000000 eip:0x00000000 args: 0x00000000 0x00000000 0x00000000 0x00000000 
+    <unknow>: -- 0xffffffff --
+ebp:0x00000000 eip:0x00000000 
+ebp:0x00000000 eip:0x00000000 args: 0x00000000 0x00000000 0x00000000 0x00000000 
+    <unknow>: -- 0xffffffff --
+ebp:0x00000000 eip:0x00000000 
+ebp:0x00000000 eip:0x00000000 args: 0x00000000 0x00000000 0x00000000 0x00000000 
+    <unknow>: -- 0xffffffff --
+ebp:0x00000000 eip:0x00000000 
+ebp:0x00000000 eip:0x00000000 args: 0x00000000 0x00000000 0x00000000 0x00000000 
+    <unknow>: -- 0xffffffff --
+ebp:0x00000000 eip:0x00000000 
+ebp:0x00000000 eip:0x00000000 args: 0x00000000 0x00000000 0x00000000 0x00000000 
+    <unknow>: -- 0xffffffff --
+ebp:0x00000000 eip:0x00000000 
+ebp:0x00000000 eip:0x00000000 args: 0x00000000 0x00000000 0x00000000 0x00000000 
+    <unknow>: -- 0xffffffff --
+ebp:0x00000000 eip:0x00000000 
+ebp:0x00000000 eip:0x00000000 args: 0x00000000 0x00000000 0x00000000 0x00000000 
+    <unknow>: -- 0xffffffff --
+ebp:0x00000000 eip:0x00000000 
+ebp:0x00000000 eip:0x00000000 args: 0x00000000 0x00000000 0x00000000 0x00000000 
+    <unknow>: -- 0xffffffff --
+ebp:0x00000000 eip:0x00000000 
+ebp:0x00000000 eip:0x00000000 args: 0x00000000 0x00000000 0x00000000 0x00000000 
+    <unknow>: -- 0xffffffff --
+ebp:0x00000000 eip:0x00000000 
+ebp:0x00000000 eip:0x00000000 args: 0x00000000 0x00000000 0x00000000 0x00000000 
+    <unknow>: -- 0xffffffff --
+ebp:0x00000000 eip:0x00000000 
+ebp:0x00000000 eip:0x00000000 args: 0x00000000 0x00000000 0x00000000 0x00000000 
+    <unknow>: -- 0xffffffff --
+ebp:0x00000000 eip:0x00000000 
+ebp:0x00000000 eip:0x00000000 args: 0x00000000 0x00000000 0x00000000 0x00000000 
+    <unknow>: -- 0xffffffff --
+ebp:0x00000000 eip:0x00000000 
+memory management: default_pmm_manager
+e820map:
+  memory: 0009fc00, [00000000, 0009fbff], type = 1.
+  memory: 00000400, [0009fc00, 0009ffff], type = 2.
+  memory: 00010000, [000f0000, 000fffff], type = 2.
+  memory: 07efe000, [00100000, 07ffdfff], type = 1.
+  memory: 00002000, [07ffe000, 07ffffff], type = 2.
+  memory: 00040000, [fffc0000, ffffffff], type = 2.
+check_alloc_page() succeeded!
+Can not get the pte.
+check_pgdir() succeeded!
+check_boot_pgdir() succeeded!
+-------------------- BEGIN --------------------
+PDE(0e0) c0000000-f8000000 38000000 urw
+  |-- PTE(38000) c0000000-f8000000 38000000 -rw
+PDE(001) fac00000-fb000000 00400000 -rw
+  |-- PTE(000e0) faf00000-fafe0000 000e0000 urw
+  |-- PTE(00001) fafeb000-fafec000 00001000 -rw
+--------------------- END ---------------------
+use SLOB allocator
+kmalloc_init() succeeded!
+check_vma_struct() succeeded!
+page fault at 0x00000100: K/W [no page found].
+check_pgfault() succeeded!
+check_vmm() succeeded.
+not valid addr 9e, and  can not find it in vma
+trapframe at 0xc0129e94
+  edi  0x00000001
+  esi  0x00000000
+  ebp  0xc0129ef8
+  oesp 0xc0129eb4
+  ebx  0x00010094
+  edx  0xc0382090
+  ecx  0x00000016
+  eax  0x0000002a
+  ds   0x----0010
+  es   0x----0010
+  fs   0x----0023
+  gs   0x----0023
+  trap 0x0000000e Page Fault
+  err  0x00000002
+  eip  0xc010971a
+  cs   0x----0008
+  flag 0x00000002 IOPL=0
+kernel panic at kern/trap/trap.c:222:
+    handle pgfault failed in kernel mode. ret=-3
+
+Welcome to the kernel debug monitor!!
+Type 'help' for a list of commands.
+K> help
+help - Display this list of commands.
+kerninfo - Display information about the kernel.
+backtrace - Print backtrace of stack frame.
+K> kerninfo
+Special kernel symbols:
+  entry  0xc010002a (phys)
+  etext  0xc010be7b (phys)
+  edata  0xc019bf2a (phys)
+  end    0xc019f0b8 (phys)
+Kernel executable memory footprint: 637KB
+K> h
+Unknown command 'h'
+K> help
+help - Display this list of commands.
+kerninfo - Display information about the kernel.
+backtrace - Print backtrace of stack frame.
+K> backtrace
+ebp:0xc0129d48 eip:0xc0100af1 args: 0x00000000 0x00000001 0xc0129dc8 0xc0100d0d 
+    kern/debug/kdebug.c:358: print_stackframe+28
+ebp:0xc0129d58 eip:0xc0100e0f 
+ebp:0xc0129d58 eip:0xc0100e0f args: 0x00000000 0xc0129d7c 0x00000000 0x00000000 
+    kern/debug/kmonitor.c:129: mon_backtrace+10
+ebp:0xc0129dc8 eip:0xc0100d0d 
+ebp:0xc0129dc8 eip:0xc0100d0d args: 0xc019bf60 0x00000000 0xc010c576 0xc0129e40 
+    kern/debug/kmonitor.c:75: runcmd+137
+ebp:0xc0129df8 eip:0xc0100d8b 
+ebp:0xc0129df8 eip:0xc0100d8b args: 0x00000000 0xc0129e3c 0x000000de 0xc010134a 
+    kern/debug/kmonitor.c:96: kmonitor+85
+ebp:0xc0129e28 eip:0xc0100e80 
+ebp:0xc0129e28 eip:0xc0100e80 args: 0xc010c500 0x000000de 0xc010c548 0xfffffffd 
+    kern/debug/panic.c:30: __panic+105
+ebp:0xc0129e58 eip:0xc01028bd 
+ebp:0xc0129e58 eip:0xc01028bd args: 0xc0129e94 0xc01a7084 0x00000001 0xc01a708c 
+    kern/trap/trap.c:222: trap_dispatch+242
+ebp:0xc0129e88 eip:0xc0102af0 
+ebp:0xc0129e88 eip:0xc0102af0 args: 0xc0129e94 0x00000001 0x00000000 0xc0129ef8 
+    kern/trap/trap.c:319: trap+74
+ebp:0xc0129ef8 eip:0xc0102b45 
+ebp:0xc0129ef8 eip:0xc0102b45 args: 0xc0382090 0x00000000 0xc0129f44 0xc012aa00 
+    kern/trap/trapentry.S:24: <unknown>+0
+ebp:0xc0129f28 eip:0xc0109ee8 
+ebp:0xc0129f28 eip:0xc0109ee8 args: 0x00000100 0x00000000 0xc0129f44 0xc0382000 
+    kern/process/proc.c:463: do_fork+241
+ebp:0xc0129f98 eip:0xc0109ad1 
+ebp:0xc0129f98 eip:0xc0109ad1 args: 0xc010ab2f 0x00000000 0x00000000 0x00007c7c 
+    kern/process/proc.c:272: kernel_thread+111
+ebp:0xc0129fc8 eip:0xc010adb5 
+ebp:0xc0129fc8 eip:0xc010adb5 args: 0xc010be9c 0xc010be80 0x0000318e 0x00000000 
+    kern/process/proc.c:909: proc_init+255
+ebp:0xc0129ff8 eip:0xc0100098 
+ebp:0xc0129ff8 eip:0xc0100098 args: 0x00000000 0x00000000 0x0000ffff 0x40cf9a00 
+    kern/init/init.c:41: kern_init+109
+ebp:0x00000000 eip:0xc0100028 
+ebp:0x00000000 eip:0xc0100028 args: not valid addr 8, and  can not find it in vma
+trapframe at 0xc0129ccc
+  edi  0x00000001
+  esi  0x00000000
+  ebp  0xc0129d48
+  oesp 0xc0129cec
+  ebx  0x00010094
+  edx  0x00000000
+  ecx  0xc00b8000
+  eax  0x00000008
+  ds   0x----0010
+  es   0x----0010
+  fs   0x----0023
+  gs   0x----0023
+  trap 0x0000000e Page Fault
+  err  0x00000000
+  eip  0xc0100b47
+  cs   0x----0008
+  flag 0x00000002 IOPL=0
+Welcome to the kernel debug monitor!!
+Type 'help' for a list of commands.
+K> help
+help - Display this list of commands.
+kerninfo - Display information about the kernel.
+backtrace - Print backtrace of stack frame.
+K> backtrace
+ebp:0xc0129b80 eip:0xc0100af1 args: 0x00000000 0x00000001 0xc0129c00 0xc0100d0d 
+    kern/debug/kdebug.c:358: print_stackframe+28
+ebp:0xc0129b90 eip:0xc0100e0f 
+ebp:0xc0129b90 eip:0xc0100e0f args: 0x00000000 0xc0129bb4 0x00000000 0x00000000 
+    kern/debug/kmonitor.c:129: mon_backtrace+10
+ebp:0xc0129c00 eip:0xc0100d0d 
+ebp:0xc0129c00 eip:0xc0100d0d args: 0xc019bf60 0x00000000 0xc0129c30 0xc010267f 
+    kern/debug/kmonitor.c:75: runcmd+137
+ebp:0xc0129c30 eip:0xc0100d8b 
+ebp:0xc0129c30 eip:0xc0100d8b args: 0x00000000 0x00000000 0xc010c729 0x00000000 
+    kern/debug/kmonitor.c:96: kmonitor+85
+ebp:0xc0129c60 eip:0xc0100e80 
+ebp:0xc0129c60 eip:0xc0100e80 args: 0xc010c500 0x000000de 0xc010c548 0xfffffffd 
+    kern/debug/panic.c:30: __panic+105
+ebp:0xc0129c90 eip:0xc01028bd 
+ebp:0xc0129c90 eip:0xc01028bd args: 0xc0129ccc 0x00000000 0x00010094 0x00000000 
+    kern/trap/trap.c:222: trap_dispatch+242
+ebp:0xc0129cc0 eip:0xc0102af0 
+ebp:0xc0129cc0 eip:0xc0102af0 args: 0xc0129ccc 0x00000001 0x00000000 0xc0129d48 
+    kern/trap/trap.c:319: trap+74
+ebp:0xc0129d48 eip:0xc0102b45 
+ebp:0xc0129d48 eip:0xc0102b45 args: 0x00000000 0x00000001 0xc0129dc8 0xc0100d0d 
+    kern/trap/trapentry.S:24: <unknown>+0
+ebp:0xc0129d58 eip:0xc0100e0f 
+ebp:0xc0129d58 eip:0xc0100e0f args: 0x00000000 0xc0129d7c 0x00000000 0x00000000 
+    kern/debug/kmonitor.c:129: mon_backtrace+10
+ebp:0xc0129dc8 eip:0xc0100d0d 
+ebp:0xc0129dc8 eip:0xc0100d0d args: 0xc019bf60 0x00000000 0xc010c576 0xc0129e40 
+    kern/debug/kmonitor.c:75: runcmd+137
+ebp:0xc0129df8 eip:0xc0100d8b 
+ebp:0xc0129df8 eip:0xc0100d8b args: 0x00000000 0xc0129e3c 0x000000de 0xc010134a 
+    kern/debug/kmonitor.c:96: kmonitor+85
+ebp:0xc0129e28 eip:0xc0100e80 
+ebp:0xc0129e28 eip:0xc0100e80 args: 0xc010c500 0x000000de 0xc010c548 0xfffffffd 
+    kern/debug/panic.c:30: __panic+105
+ebp:0xc0129e58 eip:0xc01028bd 
+ebp:0xc0129e58 eip:0xc01028bd args: 0xc0129e94 0xc01a7084 0x00000001 0xc01a708c 
+    kern/trap/trap.c:222: trap_dispatch+242
+ebp:0xc0129e88 eip:0xc0102af0 
+ebp:0xc0129e88 eip:0xc0102af0 args: 0xc0129e94 0x00000001 0x00000000 0xc0129ef8 
+    kern/trap/trap.c:319: trap+74
+ebp:0xc0129ef8 eip:0xc0102b45 
+ebp:0xc0129ef8 eip:0xc0102b45 args: 0xc0382090 0x00000000 0xc0129f44 0xc012aa00 
+    kern/trap/trapentry.S:24: <unknown>+0
+ebp:0xc0129f28 eip:0xc0109ee8 
+ebp:0xc0129f28 eip:0xc0109ee8 args: 0x00000100 0x00000000 0xc0129f44 0xc0382000 
+    kern/process/proc.c:463: do_fork+241
+ebp:0xc0129f98 eip:0xc0109ad1 
+ebp:0xc0129f98 eip:0xc0109ad1 args: 0xc010ab2f 0x00000000 0x00000000 0x00007c7c 
+    kern/process/proc.c:272: kernel_thread+111
+ebp:0xc0129fc8 eip:0xc010adb5 
+ebp:0xc0129fc8 eip:0xc010adb5 args: 0xc010be9c 0xc010be80 0x0000318e 0x00000000 
+    kern/process/proc.c:909: proc_init+255
+ebp:0xc0129ff8 eip:0xc0100098 
+ebp:0xc0129ff8 eip:0xc0100098 args: 0x00000000 0x00000000 0x0000ffff 0x40cf9a00 
+    kern/init/init.c:41: kern_init+109
+ebp:0x00000000 eip:0xc0100028 
+ebp:0x00000000 eip:0xc0100028 args: not valid addr 8, and  can not find it in vma
+trapframe at 0xc0129b04
+  edi  0x00000001
+  esi  0x00000000
+  ebp  0xc0129b80
+  oesp 0xc0129b24
+  ebx  0x00010094
+  edx  0x00000000
+  ecx  0xc00b8000
+  eax  0x00000008
+  ds   0x----0010
+  es   0x----0010
+  fs   0x----0023
+  gs   0x----0023
+  trap 0x0000000e Page Fault
+  err  0x00000000
+  eip  0xc0100b47
+  cs   0x----0008
+  flag 0x00000002 IOPL=0
+Welcome to the kernel debug monitor!!
+Type 'help' for a list of commands.
+K> quit
+Unknown command 'quit'
+K> ZZ
+Unknown command 'ZZ'
+K> 
+K> 
+K> 
+K> 
+K> make: *** [qemu] Killed
+[~/moocos/ucore_lab/labcodes/lab5]
+moocos-> 
+
