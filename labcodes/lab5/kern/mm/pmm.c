@@ -433,7 +433,7 @@ get_pte(pde_t *pgdir, uintptr_t la, bool create) {
         struct Page *pg_tbl = alloc_page();
         if (!create || NULL == pg_tbl)
         {
-            cprintf("Can not get the pte.\n");
+            cprintf("[%s:%d] Can not get the pte in get_pte func.\n", __FILE__, __LINE__);
             return NULL;
         }
 
