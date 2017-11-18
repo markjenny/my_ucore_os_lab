@@ -122,6 +122,10 @@ alloc_proc(void) {
         proc->flags = 0;    //what is the meanig of process flag        
         proc->cr3 = boot_cr3;
         memset(proc->name, 0, PROC_NAME_LEN + 1);
+        //These ptr would be unbound pointer if uninitialized
+        proc->cptr = NULL;
+        proc->yptr = NULL;
+        proc->optr = NULL;
     }
     return proc;
 }
