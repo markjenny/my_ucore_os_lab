@@ -402,13 +402,7 @@ do_pgfault(struct mm_struct *mm, uint32_t error_code, uintptr_t addr) {
     pgfault_num++;
     //If the addr is in the range of a mm's vma?
     if (vma == NULL || vma->vm_start > addr || vma->vm_end < addr) {
-        cprintf("not valid addr %x, and  can not find it in vma range\n", 
-                addr);
-#if 0
-        uintptr_t vma_start = vma->vm_start;
-        uintptr_t vma_end = vma->vm_end;
-        cprintf("test:%d,%d", vma_start, vma_end);
-#endif
+        cprintf("not valid addr %x, and  can not find it in vma range\n", addr);
         goto failed;
     }
     //check the error_code(if the W/R=1 or W/R represent the write error and read error
