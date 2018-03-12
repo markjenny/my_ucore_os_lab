@@ -70,4 +70,35 @@ struct proc_struct {
 * list_link ： 将进程穿成串；
 * hash_link ：有的时候从list_link中进行遍历的话效率太低了，采用hash_link会好很多；
 
+---
+
+# 练习2
+
+---
+
+练习2是创建一个init线程，但是创建这个的流程是和创建一个进程的相似的，我们从中可以学习到如何创建一个进程；
+
+创建这个`init`线程是从函数`kernel_thread`开始的，首先创建一个中断帧trapframe，这个中断帧是为了进程切换过程最后中断返回时可以正常执行该线程的入口函数，所以对trapframe进行了如下的设置：
+
+```
+    struct trapframe tf;                                                            
+    memset(&tf, 0, sizeof(struct trapframe));                                       
+    tf.tf_cs = KERNEL_CS;                                                           
+    tf.tf_ds = tf.tf_es = tf.tf_ss = KERNEL_DS;                                     
+    tf.tf_regs.reg_ebx = (uint32_t)fn;                                              
+    tf.tf_regs.reg_edx = (uint32_t)arg;                                             
+    tf.tf_eip = (uint32_t)kernel_thread_entry;
+```
+
+从中可以看到`tf_cs`，`tf_ds`，`tf_es`，`tf_ss`均设置成了内核段选择子，这样从中断返回时就可以仍然在内核中；`tf_eip`设置成线程入口函数`kernel_thread_entry`函数；
+
+然后进入`do_fork`函数(其实该函数应该是创建进程的函数，但是由于内核进程都是共有一个内存空间，只有上下文和堆栈不同，所以就可以认为是创建线程的函数)，具体的可以分成如下几步：
+
+* 创建PCB；
+* 创建内核栈；
+* 拷贝内存空间(mm_struct);
+* 拷贝线程数据(主要是上下文和和内核堆栈的trapfram数据)；
+* 加入线程列表(原子操作，ucore的做法是屏蔽中断)；
+* 修改进程的状态(RUNNABLE)，准备被调度；
+
 
