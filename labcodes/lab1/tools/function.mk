@@ -1,4 +1,3 @@
-function.mk
 OBJPREFIX := __objs_
 
 .SECONDEXPANSION:
@@ -14,7 +13,7 @@ OBJPREFIX := __objs_
 # 如果没有显示标记出后缀名，那么将$(1)下所有的文件均列出来
 # list all files in some directories: (#directories, #types)
 listf = $(filter $(if $(2),$(addprefix %.,$(2)),%),\
-$(wildcard $(addsuffix $(SLASH)*,$(1))))
+		  $(wildcard $(addsuffix $(SLASH)*,$(1))))
 
 # brief 构建目录OBJDIR/$(2),并通过$(1)的文件列表获取到其可重定向文件(即.o文件)列表
 # 并构建出以OBJDIR/$(2)为目录，以获取到的可重定向文件为文件，制作出
@@ -23,7 +22,7 @@ $(wildcard $(addsuffix $(SLASH)*,$(1))))
 # param2 $(2) 表示最后形成的packet的文件夹名
 # get .o obj files: (#files[, packet])
 toobj = $(addprefix $(OBJDIR)$(SLASH)$(if $(2),$(2)$(SLASH)),\
-$(addsuffix .o,$(basename $(1))))
+		$(addsuffix .o,$(basename $(1))))
 
 # brief 与上述是类似的，只不过该函数是获取依赖文件
 # param1 $(1) 表示源文件的文件名（含后缀）
@@ -42,10 +41,10 @@ packetname = $(if $(1),$(addprefix $(OBJPREFIX),$(1)),$(OBJPREFIX))
 # cc compile template, generate rule for dep, obj: (file, cc[, flags, dir])
 define cc_template
 $$(call todep,$(1),$(4)): $(1) | $$$$(dir $$$$@)
-@$(2) -I$$(dir $(1)) $(3) -MM $$< -MT "$$(patsubst %.d,%.o,$$@) $$@"> $$@
+	@$(2) -I$$(dir $(1)) $(3) -MM $$< -MT "$$(patsubst %.d,%.o,$$@) $$@"> $$@
 $$(call toobj,$(1),$(4)): $(1) | $$$$(dir $$$$@)
-@echo + cc $$<
-$(V)$(2) -I$$(dir $(1)) $(3) -c $$< -o $$@
+	@echo + cc $$<
+	$(V)$(2) -I$$(dir $(1)) $(3) -c $$< -o $$@
 ALLOBJS += $$(call toobj,$(1),$(4))
 endef
 
@@ -82,7 +81,7 @@ __temp_objs__ = $$(foreach p,$(call packetname,$(2)),$$($$(p))) $(3)
 TARGETS += $$(__temp_target__)
 ifneq ($(4),)
 $$(__temp_target__): $$(__temp_objs__) | $$$$(dir $$$$@)
-$(V)$(4) $(5) $$^ -o $$@
+	$(V)$(4) $(5) $$^ -o $$@
 else
 $$(__temp_target__): $$(__temp_objs__) | $$$$(dir $$$$@)
 endif
@@ -92,10 +91,10 @@ endef
 define do_finish_all
 ALLDEPS = $$(ALLOBJS:.o=.d)
 $$(sort $$(dir $$(ALLOBJS)) $(BINDIR)$(SLASH) $(OBJDIR)$(SLASH)):
-@$(MKDIR) $$@
+	@$(MKDIR) $$@
 endef
 
-# -------------------- function end --------------------
+# --------------------  function end  --------------------
 # compile file: (#files, cc[, flags, dir])
 cc_compile = $(eval $(call do_cc_compile,$(1),$(2),$(3),$(4)))
 

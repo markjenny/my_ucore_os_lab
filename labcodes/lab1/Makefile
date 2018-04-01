@@ -1,40 +1,39 @@
-PROJ := challenge
-EMPTY :=
-SPACE := $(EMPTY) $(EMPTY)
-SLASH := /
+PROJ	:= challenge
+EMPTY	:=
+SPACE	:= $(EMPTY) $(EMPTY)
+SLASH	:= /
 
-V := @
-#need llvm/cang-3.5+
-#USELLVM := 1
+V       := @
+
 # try to infer the correct GCCPREFX
 ifndef GCCPREFIX
 GCCPREFIX := $(shell if i386-elf-objdump -i 2>&1 | grep '^elf32-i386$$' >/dev/null 2>&1; \
-then echo 'i386-elf-'; \
-elif objdump -i 2>&1 | grep 'elf32-i386' >/dev/null 2>&1; \
-then echo ''; \
-else echo "***" 1>&2; \
-echo "*** Error: Couldn't find an i386-elf version of GCC/binutils." 1>&2; \
-echo "*** Is the directory with i386-elf-gcc in your PATH?" 1>&2; \
-echo "*** If your i386-elf toolchain is installed with a command" 1>&2; \
-echo "*** prefix other than 'i386-elf-', set your GCCPREFIX" 1>&2; \
-echo "*** environment variable to that prefix and run 'make' again." 1>&2; \
-echo "*** To turn off this error, run 'gmake GCCPREFIX= ...'." 1>&2; \
-echo "***" 1>&2; exit 1; fi)
+	then echo 'i386-elf-'; \
+	elif objdump -i 2>&1 | grep 'elf32-i386' >/dev/null 2>&1; \
+	then echo ''; \
+	else echo "***" 1>&2; \
+	echo "*** Error: Couldn't find an i386-elf version of GCC/binutils." 1>&2; \
+	echo "*** Is the directory with i386-elf-gcc in your PATH?" 1>&2; \
+	echo "*** If your i386-elf toolchain is installed with a command" 1>&2; \
+	echo "*** prefix other than 'i386-elf-', set your GCCPREFIX" 1>&2; \
+	echo "*** environment variable to that prefix and run 'make' again." 1>&2; \
+	echo "*** To turn off this error, run 'gmake GCCPREFIX= ...'." 1>&2; \
+	echo "***" 1>&2; exit 1; fi)
 endif
 
 # try to infer the correct QEMU
 ifndef QEMU
 QEMU := $(shell if which qemu-system-i386 > /dev/null; \
-then echo 'qemu-system-i386'; exit; \
-elif which i386-elf-qemu > /dev/null; \
-then echo 'i386-elf-qemu'; exit; \
-elif which qemu > /dev/null; \
-then echo 'qemu'; exit; \
-else \
-echo "***" 1>&2; \
-echo "*** Error: Couldn't find a working QEMU executable." 1>&2; \
-echo "*** Is the directory containing the qemu binary in your PATH" 1>&2; \
-echo "***" 1>&2; exit 1; fi)
+	then echo 'qemu-system-i386'; exit; \
+	elif which i386-elf-qemu > /dev/null; \
+	then echo 'i386-elf-qemu'; exit; \
+	elif which qemu > /dev/null; \
+	then echo 'qemu'; exit; \
+	else \
+	echo "***" 1>&2; \
+	echo "*** Error: Couldn't find a working QEMU executable." 1>&2; \
+	echo "*** Is the directory containing the qemu binary in your PATH" 1>&2; \
+	echo "***" 1>&2; exit 1; fi)
 endif
 
 # eliminate default suffix rules
@@ -58,31 +57,37 @@ CFLAGS := -fno-builtin -Wall -g -m32 -mno-sse -nostdinc $(DEFS)
 CFLAGS += $(shell $(CC) -fno-stack-protector -E -x c /dev/null >/dev/null 2>&1 && echo -fno-stack-protector)
 endif
 
-CTYPE := c S
+HOSTCC		:= gcc
+HOSTCFLAGS	:= -g -Wall -O2
 
-LD := $(GCCPREFIX)ld
-LDFLAGS := -m $(shell $(LD) -V | grep elf_i386 2>/dev/null)
-LDFLAGS += -nostdlib
+CC		:= $(GCCPREFIX)gcc
+CFLAGS	:= -fno-builtin -Wall -ggdb -m32 -gstabs -nostdinc $(DEFS)
+CFLAGS	+= $(shell $(CC) -fno-stack-protector -E -x c /dev/null >/dev/null 2>&1 && echo -fno-stack-protector)
+CTYPE	:= c S
+
+LD      := $(GCCPREFIX)ld
+LDFLAGS	:= -m $(shell $(LD) -V | grep elf_i386 2>/dev/null)
+LDFLAGS	+= -nostdlib
 
 OBJCOPY := $(GCCPREFIX)objcopy
 OBJDUMP := $(GCCPREFIX)objdump
 
-COPY := cp
-MKDIR := mkdir -p
-MV := mv
-RM := rm -f
-AWK := awk
-SED := sed
-SH := sh
-TR := tr
-TOUCH := touch -c
+COPY	:= cp
+MKDIR   := mkdir -p
+MV		:= mv
+RM		:= rm -f
+AWK		:= awk
+SED		:= sed
+SH		:= sh
+TR		:= tr
+TOUCH	:= touch -c
 
-OBJDIR := obj
-BINDIR := bin
+OBJDIR	:= obj
+BINDIR	:= bin
 
-ALLOBJS :=
-ALLDEPS :=
-TARGETS :=
+ALLOBJS	:=
+ALLDEPS	:=
+TARGETS	:=
 
 include tools/function.mk
 
@@ -119,7 +124,9 @@ INCLUDE += libs/
 # C编译器参数
 CFLAGS += $(addprefix -I,$(INCLUDE))
 
-LIBDIR += libs
+CFLAGS	+= $(addprefix -I,$(INCLUDE))
+
+LIBDIR	+= libs
 
 # libs就是add_files函数中待打包的打包名（便于理解packet的意思）
 $(call add_files_cc,$(call listf_cc,$(LIBDIR)),libs,)
@@ -127,22 +134,21 @@ $(call add_files_cc,$(call listf_cc,$(LIBDIR)),libs,)
 # -------------------------------------------------------------------
 # kernel
 
-# kernel中包含头文件的所有include目录
-KINCLUDE += kern/debug/ \
-kern/driver/ \
-kern/trap/ \
-kern/mm/
+KINCLUDE	+= kern/debug/ \
+			   kern/driver/ \
+			   kern/trap/ \
+			   kern/mm/
 
 # kernel中包含源文件的所有source目录
-KSRCDIR += kern/init \
-kern/libs \
-kern/debug \
-kern/driver \
-kern/trap \
-kern/mm
+KSRCDIR		+= kern/init \
+			   kern/libs \
+			   kern/debug \
+			   kern/driver \
+			   kern/trap \
+			   kern/mm
 
 # 编译kernel需要的编译器参数
-KCFLAGS += $(addprefix -I,$(KINCLUDE))
+KCFLAGS		+= $(addprefix -I,$(KINCLUDE))
 
 # 编译kernel中的每个源文件，并将每个重定向文件(.o)放置到kernel文件夹
 $(call add_files_cc,$(call listf_cc,$(KSRCDIR)),kernel,$(KCFLAGS))
@@ -150,7 +156,7 @@ $(call add_files_cc,$(call listf_cc,$(KSRCDIR)),kernel,$(KCFLAGS))
 # 将function中之前被add_files_cc调用产生的libs和kernel下的重定向文件
 # 都被存放在了临时变量__objs_libs和__objs_kernel这两个临时变量中
 # 所以KBOJ是都是kernel需要的所有重定向文件
-KOBJS = $(call read_packet,kernel libs)
+KOBJS	= $(call read_packet,kernel libs)
 
 # create kernel target
 # 构建kernel的目标路径，/bin/kernel，kernel就是一个文件了
@@ -193,13 +199,14 @@ bootblock = $(call totarget,bootblock)
 
 # sign文件夹这里是典型的order-by-prerequisites
 $(bootblock): $(call toobj,$(bootfiles)) | $(call totarget,sign)
-@echo + ld $@
-$(V)$(LD) $(LDFLAGS) -N -e start -Ttext 0x7C00 $^ -o $(call toobj,bootblock)
-@$(OBJDUMP) -S $(call objfile,bootblock) > $(call asmfile,bootblock)
+	@echo + ld $@
+	$(V)$(LD) $(LDFLAGS) -N -e start -Ttext 0x7C00 $^ -o $(call toobj,bootblock)
+	@$(OBJDUMP) -S $(call objfile,bootblock) > $(call asmfile,bootblock)
 # 将bootblock中的可执行文件写成bootblock下的.out文件
-@$(OBJCOPY) -S -O binary $(call objfile,bootblock) $(call outfile,bootblock)
+	@$(OBJDUMP) -t $(call objfile,bootblock) | $(SED) '1,/SYMBOL TABLE/d; s/ .* / /; /^$$/d' > $(call symfile,bootblock)
+	@$(OBJCOPY) -S -O binary $(call objfile,bootblock) $(call outfile,bootblock)
 # 执行sign程序，将.out的可执行文件生成bootblock这个可执行文件
-@$(call totarget,sign) $(call outfile,bootblock) $(bootblock)
+	@$(call totarget,sign) $(call outfile,bootblock) $(bootblock)
 
 #创建可执行目标bootblock
 $(call create_target,bootblock)
@@ -214,12 +221,12 @@ $(call create_target_host,sign,sign)
 # -------------------------------------------------------------------
 
 # create ucore.img
-UCOREIMG := $(call totarget,ucore.img)
+UCOREIMG	:= $(call totarget,ucore.img)
 
 $(UCOREIMG): $(kernel) $(bootblock)
-$(V)dd if=/dev/zero of=$@ count=10000
-$(V)dd if=$(bootblock) of=$@ conv=notrunc
-$(V)dd if=$(kernel) of=$@ seek=1 conv=notrunc
+	$(V)dd if=/dev/zero of=$@ count=10000
+	$(V)dd if=$(bootblock) of=$@ conv=notrunc
+	$(V)dd if=$(kernel) of=$@ seek=1 conv=notrunc
 
 $(call create_target,ucore.img)
 
@@ -227,12 +234,12 @@ $(call create_target,ucore.img)
 
 $(call finish_all)
 
-IGNORE_ALLDEPS = clean \
-dist-clean \
-grade \
-touch \
-print-.+ \
-handin
+IGNORE_ALLDEPS	= clean \
+				  dist-clean \
+				  grade \
+				  touch \
+				  print-.+ \
+				  handin
 
 ifeq ($(call match,$(MAKECMDGOALS),$(IGNORE_ALLDEPS)),0)
 -include $(ALLDEPS)
@@ -241,67 +248,77 @@ endif
 # files for grade script
 
 TARGETS: $(TARGETS)
-
+all: $(TARGETS)
 .DEFAULT_GOAL := TARGETS
 
 .PHONY: qemu qemu-nox debug debug-nox
+lab1-mon: $(UCOREIMG)
+	$(V)$(TERMINAL) -e "$(QEMU) -S -s -d in_asm -D $(BINDIR)/q.log -monitor stdio -hda $< -serial null"
+	$(V)sleep 2
+	$(V)$(TERMINAL) -e "gdb -q -x tools/lab1init"
+debug-mon: $(UCOREIMG)
+#	$(V)$(QEMU) -S -s -monitor stdio -hda $< -serial null &
+	$(V)$(TERMINAL) -e "$(QEMU) -S -s -monitor stdio -hda $< -serial null"
+	$(V)sleep 2
+	$(V)$(TERMINAL) -e "gdb -q -x tools/moninit"
 qemu-mon: $(UCOREIMG)
-$(V)$(QEMU) -no-reboot -monitor stdio -hda $< -serial null
+	$(V)$(QEMU) -monitor stdio -hda $< -serial null
 qemu: $(UCOREIMG)
-$(V)$(QEMU) -no-reboot -parallel stdio -hda $< -serial null
-log: $(UCOREIMG)
-$(V)$(QEMU) -no-reboot -d int,cpu_reset -D q.log -parallel stdio -hda $< -serial null
-qemu-nox: $(UCOREIMG)
-$(V)$(QEMU) -no-reboot -serial mon:stdio -hda $< -nographic
-TERMINAL :=gnome-terminal
-debug: $(UCOREIMG)
-$(V)$(QEMU) -S -s -parallel stdio -hda $< -serial null &
-$(V)sleep 2
-$(V)$(TERMINAL) -e "gdb -q -tui -x tools/gdbinit"
+	$(V)$(QEMU) -parallel stdio -hda $< -serial null
 
+qemu-nox: $(UCOREIMG)
+	$(V)$(QEMU) -serial mon:stdio -hda $< -nographic
+TERMINAL        :=gnome-terminal
+gdb: $(UCOREIMG)
+	$(V)$(QEMU) -S -s -parallel stdio -hda $< -serial null
+debug: $(UCOREIMG)
+	$(V)$(QEMU) -S -s -parallel stdio -hda $< -serial null &
+	$(V)sleep 2
+	$(V)$(TERMINAL)  -e "cgdb -q -x tools/gdbinit"
+	
 debug-nox: $(UCOREIMG)
-$(V)$(QEMU) -S -s -serial mon:stdio -hda $< -nographic &
-$(V)sleep 2
-$(V)$(TERMINAL) -e "gdb -q -x tools/gdbinit"
+	$(V)$(QEMU) -S -s -serial mon:stdio -hda $< -nographic &
+	$(V)sleep 2
+	$(V)$(TERMINAL) -e "gdb -q -x tools/gdbinit"
 
 .PHONY: grade touch
 
-GRADE_GDB_IN := .gdb.in
-GRADE_QEMU_OUT := .qemu.out
-HANDIN := proj$(PROJ)-handin.tar.gz
+GRADE_GDB_IN	:= .gdb.in
+GRADE_QEMU_OUT	:= .qemu.out
+HANDIN			:= proj$(PROJ)-handin.tar.gz
 
-TOUCH_FILES := kern/trap/trap.c
+TOUCH_FILES		:= kern/trap/trap.c
 
-MAKEOPTS := --quiet --no-print-directory
+MAKEOPTS		:= --quiet --no-print-directory
 
 grade:
-$(V)$(MAKE) $(MAKEOPTS) clean
-$(V)$(SH) tools/grade.sh
+	$(V)$(MAKE) $(MAKEOPTS) clean
+	$(V)$(SH) tools/grade.sh
 
 touch:
-$(V)$(foreach f,$(TOUCH_FILES),$(TOUCH) $(f))
+	$(V)$(foreach f,$(TOUCH_FILES),$(TOUCH) $(f))
 
 print-%:
-@echo $($(shell echo $(patsubst print-%,%,$@) | $(TR) [a-z] [A-Z]))
+	@echo $($(shell echo $(patsubst print-%,%,$@) | $(TR) [a-z] [A-Z]))
 
-.PHONY: clean dist-clean handin packall tags
+.PHONY: clean dist-clean handin packall
 clean:
-$(V)$(RM) $(GRADE_GDB_IN) $(GRADE_QEMU_OUT) cscope* tags
--$(RM) -r $(OBJDIR) $(BINDIR)
+	$(V)$(RM) $(GRADE_GDB_IN) $(GRADE_QEMU_OUT)
+	-$(RM) -r $(OBJDIR) $(BINDIR)
 
 dist-clean: clean
--$(RM) $(HANDIN)
+	-$(RM) $(HANDIN)
 
 handin: packall
-@echo Please visit http://learn.tsinghua.edu.cn and upload $(HANDIN). Thanks!
+	@echo Please visit http://learn.tsinghua.edu.cn and upload $(HANDIN). Thanks!
 
 packall: clean
-@$(RM) -f $(HANDIN)
-@tar -czf $(HANDIN) `find . -type f -o -type d | grep -v '^\.*$$' | grep -vF '$(HANDIN)'`
+	@$(RM) -f $(HANDIN)
+	@tar -czf $(HANDIN) `find . -type f -o -type d | grep -v '^\.*$$' | grep -vF '$(HANDIN)'`
 
 tags:
-@echo TAGS ALL
-$(V)rm -f cscope.files cscope.in.out cscope.out cscope.po.out tags
-$(V)find . -type f -name "*.[chS]" >cscope.files
-$(V)cscope -bq 
-$(V)ctags -L cscope.files
+	@echo TAGS ALL
+	$(V)rm -f cscope.files cscope.in.out cscope.out cscope.po.out tags
+	$(V)find . -type f -name "*.[chS]" >cscope.files
+	$(V)cscope -bq 
+	$(V)ctags -L cscope.files
